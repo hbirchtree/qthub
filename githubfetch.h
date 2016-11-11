@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QPointer>
+#include <QNetworkReply>
 
 #include "github/githubuser.h"
 #include "github/githubrepo.h"
@@ -13,8 +14,15 @@ class GithubFetch : public QObject
 {
     Q_OBJECT
 
-    QList<GithubUser> m_users;
-    QList<GithubRepo> m_repos;
+    enum ReplyType
+    {
+        GitNone,
+        GitRepo,
+        GitUser,
+    };
+
+    QList<GithubUser*> m_users;
+    QList<GithubRepo*> m_repos;
 
     QNetworkAccessManager* m_netman;
 

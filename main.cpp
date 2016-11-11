@@ -10,6 +10,9 @@ int main(int argc, char *argv[])
     GithubFetch fetcher;
 
     fetcher.fetchUser("hbirchtree");
+    fetcher.fetchRepo("hbirchtree/coffeecutie");
+
+    return app.exec();
 
     QQmlApplicationEngine engine;
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
