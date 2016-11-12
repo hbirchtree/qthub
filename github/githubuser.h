@@ -6,6 +6,8 @@
 #include <QUrl>
 #include <QDateTime>
 
+#include "githubrepo.h"
+
 class GithubUser : public QObject
 {
     Q_OBJECT
@@ -42,9 +44,18 @@ class GithubUser : public QObject
 
     QDateTime m_registered;
 
+    QVector<GithubRepo*> m_repos;
+
 public:
     explicit GithubUser(QObject *parent = 0);
 
+public slots:
+    void addRepository(GithubRepo* repo);
+
+signals:
+    void repositoryAdded(GithubRepo* repo);
+
+public:
     quint64 id() const
     {
         return m_id;

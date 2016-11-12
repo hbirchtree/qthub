@@ -11,7 +11,7 @@
 
 #include <functional>
 
-void updateUser(GithubUser* u, QJsonObject const& o)
+void GithubFetch::updateUser(GithubUser* u, QJsonObject const& o)
 {
     u->setId(o["id"].toVariant().toULongLong());
 
@@ -33,7 +33,7 @@ void updateUser(GithubUser* u, QJsonObject const& o)
     u->setNumRepos(o["public_repos"].toVariant().toULongLong());
 }
 
-void updateRepo(GithubRepo* r, QJsonObject const& o)
+void GithubFetch::updateRepo(GithubRepo* r, QJsonObject const& o)
 {
     r->setId(o["id"].toVariant().toULongLong());
 
@@ -44,18 +44,33 @@ void updateRepo(GithubRepo* r, QJsonObject const& o)
     r->setIssues(o["open_issues"].toVariant().toULongLong());
 }
 
-void addReleases(GithubRepo* r, QJsonArray const& rels)
+void GithubFetch::addRepositories(GithubUser* u, QJsonArray const& repos)
 {
-    for(QVariant const& v : rels.toVariantList())
+    for(int i=0;i<repos.size();i++)
     {
-        QMap<QString,QVariant> m = v.toMap();
+        QJsonObject const& m = repos[i].toObject();
+        GithubRepo* r = new GithubRepo(u);
+
+        updateRepo(r, m);
+
+        u->addRepository(r);
+        m_repos.insert(r->name(), r);
+        repoUpdated(r);
+    }
+}
+
+void GithubFetch::addReleases(GithubRepo* r, QJsonArray const& rels)
+{
+    for(int i=0;i<rels.size();i++)
+    {
+        auto const& m = rels[i].toObject();
         GithubRelease* rl = new GithubRelease(r);
 
-        rl->setId(m.value("id").toULongLong());
+        rl->setId(m["id"].toVariant().toULongLong());
 
-        if(!m.value("tag_name").isNull())
-            rl->setTagName(m.value("tag_name").toString());
-        rl->setDraft(m.value("draft").toBool());
+        if(!m["tag_name"].isNull())
+            rl->setTagName(m["tag_name"].toString());
+        rl->setDraft(m["draft"].toBool());
 
         r->addRelease(rl);
     }
@@ -64,6 +79,12 @@ void addReleases(GithubRepo* r, QJsonArray const& rels)
 GithubFetch::GithubFetch(QObject *parent) : QObject(parent)
 {
     m_netman = new QNetworkAccessManager();
+
+    connect(m_netman, &QNetworkAccessManager::networkAccessibleChanged,
+            [&](QNetworkAccessManager::NetworkAccessibility acc)
+    {
+        statusChanged(acc);
+    });
 
     m_apipoint = "https://api.github.com";
     m_agentstring = "HBirchtree-Qthub-App";
@@ -74,10 +95,11 @@ GithubFetch::GithubFetch(QObject *parent) : QObject(parent)
 void GithubFetch::addToken(QNetworkRequest &req)
 {
     req.setRawHeader("User-Agent", m_agentstring.toLocal8Bit());
-    req.setRawHeader("Authorization",
-                     QString("token %1")
-                     .arg(m_token)
-                     .toLocal8Bit());
+    if(!m_token.isEmpty())
+        req.setRawHeader("Authorization",
+                         QString("token %1")
+                         .arg(m_token)
+                         .toLocal8Bit());
 }
 
 void GithubFetch::startNetworkRequest(const QString &url,
@@ -102,6 +124,12 @@ void GithubFetch::fetchUser(const QString &username)
     startNetworkRequest(QString("/users/%2")
                         .arg(username),
                         username, GitUser);
+}
+
+void GithubFetch::fetchAllRepositories(GithubUser *user)
+{
+    startNetworkRequest(QString("/users/%1/repos").arg(user->login()),
+                        user->login(), GitAllRepos);
 }
 
 void GithubFetch::fetchRepo(const QString &reponame)
@@ -144,6 +172,11 @@ void GithubFetch::requestDelete(GithubRelease *release)
             this, &GithubFetch::receiveUserData);
 }
 
+void GithubFetch::killAll()
+{
+    m_netman->deleteLater();
+}
+
 void GithubFetch::receiveUserData()
 {
     QObject* o = sender();
@@ -151,6 +184,21 @@ void GithubFetch::receiveUserData()
     if(o)
     {
         QNetworkReply* rep = dynamic_cast<QNetworkReply*>(o);
+
+        switch(rep->error())
+        {
+        case QNetworkReply::NoError:
+            break;
+        case QNetworkReply::ContentNotFoundError:
+            contentNotFound();
+            return;
+        case QNetworkReply::ServiceUnavailableError:
+            authenticationError();
+            return;
+        default:
+            networkReplyError(rep->error());
+            return;
+        }
 
         QByteArray rep_data = rep->readAll();
 
@@ -212,13 +260,21 @@ void GithubFetch::receiveUserData()
                         " with status " << rep->rawHeader("Status");
             break;
         }
+        case GitAllRepos:
+        {
+            GithubUser* u = m_users.value(o->property("id").toString());
+
+            if(u)
+                addRepositories(u, doc.array());
+            break;
+        }
         }
     }
 }
 
 void GithubFetch::registerProgress(qint64 rec, qint64 tot)
 {
-    QNetworkRequest* req = dynamic_cast<QNetworkRequest*>(sender());
+    QNetworkReply* req = dynamic_cast<QNetworkReply*>(sender());
     if(req)
     {
         qDebug() << "Download " << req->url() << " : " << rec << "/" << tot;

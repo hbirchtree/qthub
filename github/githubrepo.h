@@ -46,6 +46,13 @@ class GithubRepo : public QObject
 public:
     explicit GithubRepo(QObject *parent = 0);
 
+public slots:
+    void addRelease(GithubRelease* rel);
+
+signals:
+    void releaseAdded(QPointer<GithubRelease> rel);
+
+public:
     quint64 id() const
     {
         return m_id;
@@ -103,14 +110,8 @@ signals:
     void subscribersChanged(quint64 subscribers);
     void createdChanged(QDateTime created);
 
-    void releaseAdded(QPointer<GithubRelease> rel);
 
 public slots:
-    void addRelease(GithubRelease* rel)
-    {
-        m_releases.push_back(rel);
-        releaseAdded(rel);
-    }
 
     void setId(quint64 id)
     {

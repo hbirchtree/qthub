@@ -2,5 +2,9 @@
     <qresource prefix="/">
         <file>main.qml</file>
         <file>MainForm.ui.qml</file>
+        <file>QthubSettings.qml</file>
+        <file>QthubSettingsForm.ui.qml</file>
+        <file>Repository.qml</file>
+        <file>RepositoryForm.ui.qml</file>
     </qresource>
 </RCC>

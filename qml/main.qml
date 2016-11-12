@@ -11,14 +11,33 @@ Window {
     height: 480
     color: "#323232"
 
-    function test(user)
+    function userFound(user)
     {
-        console.log(user, user.login)
+        HubDaemon.fetchAllRepositories(user)
+    }
+    function repoFound(repo)
+    {
+        mf.repoView.setData(repo)
+    }
+
+    function authError()
+    {
+        console.log("Failed to authenticate with Github")
+    }
+    function networkError(code)
+    {
+        console.log("Network error occurred: ", code)
     }
 
     MainForm {
+        id: mf
+
         button1.onClicked: {
-            HubDaemon.userUpdated.connect(test)
+            console.log("Network status: ", HubDaemon.status);
+            HubDaemon.userUpdated.connect(userFound)
+            HubDaemon.repoUpdated.connect(repoFound)
+            HubDaemon.authenticationError.connect(authError)
+            HubDaemon.networkReplyError.connect(networkError)
             HubDaemon.fetchUser("hbirchtree");
         }
         progress.onValueChanged: {

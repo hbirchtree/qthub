@@ -9,21 +9,25 @@
 
 const char* github_token = nullptr;
 GithubFetch *m_github_daemon;
+QQmlApplicationEngine* m_engine;
 
-QObject* GenGithubDaemon(QQmlEngine* engine, QJSEngine* sengine)
+QObject* GenGithubDaemon(QQmlEngine*, QJSEngine*)
 {
-    Q_UNUSED(engine);
-
     GithubFetch* obj = new GithubFetch();
 
     if(github_token)
         obj->authenticate(github_token);
+
+    m_engine->connect(m_engine, &QQmlApplicationEngine::destroyed,
+                      obj, &GithubFetch::killAll);
 
     return obj;
 }
 
 int main(int argc, char *argv[])
 {
+    QGuiApplication app(argc, argv);
+
     if(argc >= 2)
         github_token = argv[1];
 
@@ -34,21 +38,10 @@ int main(int argc, char *argv[])
 
     qmlRegisterSingletonType<GithubFetch>("Qthub.daemon", 1, 0, "HubDaemon", GenGithubDaemon);
 
-    QGuiApplication app(argc, argv);
-
-//    fetcher.connect(&fetcher, &GithubFetch::repoUpdated,
-//                    [&](QPointer<GithubRepo> repo)
-//    {
-//        qDebug() << "Updated repo: " << repo->name();
-
-//        fetcher.fetchAllReleases(repo);
-//    });
-
-//    fetcher.fetchUser("hbirchtree");
-//    fetcher.fetchRepo("hbirchtree/coffeecutie");
-
     QQmlApplicationEngine engine;
+    m_engine = &engine;
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
+
 
     return app.exec();
 }
