@@ -6,8 +6,8 @@
 #include <QNetworkReply>
 #include <QMap>
 
-#include "github/githubuser.h"
-#include "github/githubrepo.h"
+#include "githubuser.h"
+#include "githubrepo.h"
 
 class QNetworkAccessManager;
 

@@ -1,7 +1,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 
-#include "githubfetch.h"
+#include "github/githubfetch.h"
 
 #include <QtQml/QtQml>
 #include <QtQml/QJSValue>
