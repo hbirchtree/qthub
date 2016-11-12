@@ -6,7 +6,8 @@ CONFIG += c++11
 SOURCES += main.cpp \
     github/githubuser.cpp \
     github/githubrepo.cpp \
-    githubfetch.cpp
+    githubfetch.cpp \
+    github/githubrelease.cpp
 
 RESOURCES += qml.qrc
 
@@ -21,4 +22,5 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 HEADERS += \
     github/githubuser.h \
     github/githubrepo.h \
-    githubfetch.h
+    githubfetch.h \
+    github/githubrelease.h

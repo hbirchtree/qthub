@@ -1,7 +1,12 @@
 #ifndef GITHUBREPO_H
 #define GITHUBREPO_H
 
+#include "githubrelease.h"
+
 #include <QObject>
+#include <QDateTime>
+#include <QVector>
+#include <QPointer>
 
 class GithubRepo : public QObject
 {
@@ -12,6 +17,8 @@ class GithubRepo : public QObject
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
     Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY titleChanged)
     Q_PROPERTY(QString description READ description WRITE setDescription NOTIFY descriptionChanged)
+
+    Q_PROPERTY(QDateTime created READ created WRITE setCreated NOTIFY createdChanged)
 
     /* Meta-data */
     Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY languageChanged)
@@ -26,11 +33,15 @@ class GithubRepo : public QObject
     QString m_title;
     QString m_description;
 
+    QDateTime m_created;
+
     QString m_language;
 
     quint64 m_issues;
     quint64 m_forks;
     quint64 m_subscribers;
+
+    QVector<GithubRelease*> m_releases;
 
 public:
     explicit GithubRepo(QObject *parent = 0);
@@ -75,25 +86,32 @@ public:
         return m_subscribers;
     }
 
+    QDateTime created() const
+    {
+        return m_created;
+    }
+
 signals:
 
     void idChanged(quint64 id);
-
     void nameChanged(QString name);
-
     void titleChanged(QString title);
-
     void descriptionChanged(QString description);
-
     void languageChanged(QString language);
-
     void issuesChanged(quint64 issues);
-
     void forksChanged(quint64 forks);
-
     void subscribersChanged(quint64 subscribers);
+    void createdChanged(QDateTime created);
+
+    void releaseAdded(QPointer<GithubRelease> rel);
 
 public slots:
+    void addRelease(GithubRelease* rel)
+    {
+        m_releases.push_back(rel);
+        releaseAdded(rel);
+    }
+
     void setId(quint64 id)
     {
         if (m_id == id)
@@ -157,6 +175,14 @@ public slots:
 
         m_subscribers = subscribers;
         emit subscribersChanged(subscribers);
+    }
+    void setCreated(QDateTime created)
+    {
+        if (m_created == created)
+            return;
+
+        m_created = created;
+        emit createdChanged(created);
     }
 };
 

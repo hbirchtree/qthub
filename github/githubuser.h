@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QString>
 #include <QUrl>
+#include <QDateTime>
 
 class GithubUser : public QObject
 {
@@ -15,7 +16,8 @@ class GithubUser : public QObject
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
     Q_PROPERTY(QString bio READ bio WRITE setBio NOTIFY bioChanged)
     Q_PROPERTY(QString email READ email WRITE setEmail NOTIFY emailChanged)
-    Q_PROPERTY(QString registered READ registered WRITE setRegistered NOTIFY registeredChanged)
+
+    Q_PROPERTY(QDateTime registered READ registered WRITE setRegistered NOTIFY registeredChanged)
 
     Q_PROPERTY(QUrl avatar READ avatar WRITE setAvatar NOTIFY avatarChanged)
 
@@ -31,13 +33,14 @@ class GithubUser : public QObject
     QString m_name;
     QString m_bio;
     QString m_email;
-    QString m_registered;
     QUrl m_avatar;
 
     quint64 m_numRepos;
 
     quint64 m_followers;
     quint64 m_following;
+
+    QDateTime m_registered;
 
 public:
     explicit GithubUser(QObject *parent = 0);
@@ -67,11 +70,6 @@ public:
         return m_email;
     }
 
-    QString registered() const
-    {
-        return m_registered;
-    }
-
     QUrl avatar() const
     {
         return m_avatar;
@@ -92,6 +90,11 @@ public:
         return m_following;
     }
 
+    QDateTime registered() const
+    {
+        return m_registered;
+    }
+
 signals:
 
     void idChanged(quint64 id);
@@ -104,8 +107,6 @@ signals:
 
     void emailChanged(QString email);
 
-    void registeredChanged(QString registered);
-
     void avatarChanged(QUrl avatar);
 
     void numReposChanged(quint64 numRepos);
@@ -113,6 +114,8 @@ signals:
     void followersChanged(quint64 followers);
 
     void followingChanged(quint64 following);
+
+    void registeredChanged(QDateTime registered);
 
 public slots:
     void setId(quint64 id)
@@ -155,14 +158,6 @@ public slots:
         m_email = email;
         emit emailChanged(email);
     }
-    void setRegistered(QString registered)
-    {
-        if (m_registered == registered)
-            return;
-
-        m_registered = registered;
-        emit registeredChanged(registered);
-    }
     void setAvatar(QUrl avatar)
     {
         if (m_avatar == avatar)
@@ -194,6 +189,14 @@ public slots:
 
         m_following = following;
         emit followingChanged(following);
+    }
+    void setRegistered(QDateTime registered)
+    {
+        if (m_registered == registered)
+            return;
+
+        m_registered = registered;
+        emit registeredChanged(registered);
     }
 };
 

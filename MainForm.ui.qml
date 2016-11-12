@@ -9,6 +9,7 @@ Rectangle {
     width: 800
     height: 600
     color: "#00000000"
+    property alias button1: button1
     property alias progress: progress
 
     SplitView {
@@ -69,6 +70,13 @@ Rectangle {
         Rectangle {
             id: rectangle2
             color: "#00000000"
+
+            Button {
+                id: button1
+                x: 8
+                y: 8
+                text: qsTr("Button")
+            }
         }
     }
 
