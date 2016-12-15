@@ -17,7 +17,8 @@ Window {
     }
     function repoFound(repo)
     {
-        mf.repoView.setData(repo)
+        var repo_view = mf.repoList.addDisplaced()
+        repo_view.setData(repo)<
     }
 
     function authError()
@@ -27,6 +28,11 @@ Window {
     function networkError(code)
     {
         console.log("Network error occurred: ", code)
+    }
+    function showProgress(url, rec, total)
+    {
+        mf.progress.setValue(rec / total)
+        mf.progressText.text = url
     }
 
     MainForm {
@@ -39,10 +45,18 @@ Window {
             HubDaemon.authenticationError.connect(authError)
             HubDaemon.networkReplyError.connect(networkError)
             HubDaemon.fetchUser("hbirchtree");
+
+            HubDaemon.reportProgress.connect(showProgress);
         }
         progress.onValueChanged: {
             if(progress.value == 0.0 || progress.value == 1.0)
-                progressBar1.visible = false;
+            {
+                progress.visible = false;
+                progress.height = 0;
+            }else{
+                progress.visible = true;
+                progress.height = 24;
+            }
         }
         anchors.fill: parent
     }

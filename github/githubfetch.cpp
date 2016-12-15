@@ -278,6 +278,7 @@ void GithubFetch::registerProgress(qint64 rec, qint64 tot)
     if(req)
     {
         qDebug() << "Download " << req->url() << " : " << rec << "/" << tot;
+        reportProgress(req->url().toString(), rec, tot);
     }
 }
 

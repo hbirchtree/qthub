@@ -36,12 +36,12 @@ int main(int argc, char *argv[])
     qmlRegisterType<GithubUser>("Qthub", 1, 0, "QthubUser");
     qmlRegisterType<GithubRelease>("Qthub", 1, 0, "QthubRelease");
 
-    qmlRegisterSingletonType<GithubFetch>("Qthub.daemon", 1, 0, "HubDaemon", GenGithubDaemon);
+    qmlRegisterSingletonType<GithubFetch>("Qthub.daemon", 1, 0,
+                                          "HubDaemon", GenGithubDaemon);
 
     QQmlApplicationEngine engine;
     m_engine = &engine;
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
-
 
     return app.exec();
 }
