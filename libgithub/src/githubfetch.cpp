@@ -111,10 +111,11 @@ void GithubFetch::addToken(QNetworkRequest &req)
 
 void GithubFetch::startNetworkRequest(const QString &url,
                                       QString const& id,
-                                      GithubFetch::ReplyType receive)
+                                      GithubFetch::ReplyType receive,
+                                      int page)
 {
     QNetworkRequest req;
-    req.setUrl(m_apipoint + url);
+    req.setUrl(m_apipoint + url + QString("?page=%1").arg(page));
     addToken(req);
 
     QNetworkReply* rep = m_netman->get(req);
@@ -284,27 +285,37 @@ void GithubFetch::receiveUserData()
         }
         }
 
+        qDebug().nospace().noquote()
+                << "Rate limit: "
+                << rep->rawHeader("X-RateLimit-Remaining") << "/" << rep->rawHeader("X-RateLimit-Limit");
+
         /* If data is paginated, get the next pages */
         QString linkHeader = rep->rawHeader("Link");
 
         if(!linkHeader.isEmpty())
         {
-            static QRegExp exp("&page=(\\d+)>; rel=\"last\"");
+            static QRegExp exp("page=(\\d+)>; rel=\"last\"");
+            static QRegExp exp2("page=(\\d+)>; rel=\"next\"");
 
-            qDebug() << linkHeader;
-            qDebug() << exp.indexIn(linkHeader);
-            qDebug() << exp.indexIn(linkHeader, exp.matchedLength());
-            qDebug() << exp.capturedTexts();
-            qDebug() << exp.errorString();
-
-            int next = 0;
-            int last = 0;
-
-            if(next == 2)
-                for(int i=0;i<=last;i++)
+            if(exp.indexIn(linkHeader) != -1 && exp2.indexIn(linkHeader) != -1)
+            {
+                if(exp.capturedTexts().size() > 1 && exp2.capturedTexts().size() > 1)
                 {
+                    int next = exp2.cap(1).toInt();
+                    int last = exp.cap(1).toInt();
 
+                    QNetworkRequest req = rep->request();
+
+                    if(next == 2)
+                        for(int i=2;i<=last;i++)
+                        {
+                            startNetworkRequest(req.url().path().split("?").at(0),
+                                                rep->property("id").toString(),
+                                                static_cast<ReplyType>(rep->property("type").toInt()),
+                                                i);
+                        }
                 }
+            }
         }
     }
 }
@@ -313,10 +324,7 @@ void GithubFetch::registerProgress(qint64 rec, qint64 tot)
 {
     QNetworkReply* req = dynamic_cast<QNetworkReply*>(sender());
     if(req)
-    {
-//        qDebug() << "Download " << req->url() << " : " << rec << "/" << tot;
         reportProgress(req->url().toString(), rec, tot);
-    }
 }
 
 void GithubFetch::authenticate(const QString &token)

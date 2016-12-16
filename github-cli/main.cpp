@@ -11,6 +11,7 @@
 
 /* Option strings */
 const char* const api_token_str = "api-token";
+const char* const filter_str = "filter";
 const char* const action_str = "action";
 const char* const category_str = "category";
 const char* const item_str = "item";
@@ -28,7 +29,9 @@ int main(int argc, char *argv[])
     parser.addVersionOption();
 
     parser.addOption(QCommandLineOption(api_token_str, "Github API token",
-                                        "[API key]"));
+                                        "<API key>"));
+    parser.addOption(QCommandLineOption(filter_str, "Filter for resources [releases, tags, files]",
+                                        "<^.*[0-9a-z]+.*$>"));
 
     parser.addPositionalArgument(
                 action_str,
@@ -52,10 +55,9 @@ int main(int argc, char *argv[])
         github_daemon.authenticate(parser.value(api_token_str));
     }
 
-    if(parser.positionalArguments().size() != 3)
+    if(parser.positionalArguments().size() < 3)
     {
         parser.showHelp();
-        QCoreApplication::exit();
     }
 
     /* Listing functions */
@@ -65,11 +67,20 @@ int main(int argc, char *argv[])
         if(!github_daemon.activeTransfers())
             QCoreApplication::exit();
     };
-    auto list_release = [&](GithubRepo*, GithubRelease* rl)
+    auto list_release = [&](GithubRepo* r, GithubRelease* rl)
     {
-        std::cout << rl->id() << " " << rl->tagName().toStdString() << std::endl;
+        std::cout << rl->id() << " "
+                  << r->name().toStdString() << ":" << rl->tagName().toStdString()
+                  << std::endl;
         if(!github_daemon.activeTransfers())
             QCoreApplication::exit();
+    };
+
+    /* Deleting resources */
+    auto delete_release = [&](GithubRepo* repo, GithubRelease* rl)
+    {
+//        github_daemon.requestDelete(rl);
+        list_release(repo, rl);
     };
 
     /* Recursion functions */
@@ -92,15 +103,18 @@ int main(int argc, char *argv[])
         qDebug() << "Failed to authenticate!";
         QCoreApplication::exit();
     });
-//    QObject::connect(&github_daemon, &GithubFetch::reportProgress,
-//                     [&](QString const& dl, int curr, int tot){
-//        qDebug().noquote() << QString("Downloading resource: %1 (%2/%3)")
-//                              .arg(dl).arg(curr).arg(tot);
-//    });
+    QObject::connect(&github_daemon, &GithubFetch::reportProgress,
+                     [&](QString const& dl, int curr, int tot){
+        qDebug().noquote() << QString("Downloading resource: %1 (%2/%3)")
+                              .arg(dl).arg(curr).arg(tot);
+    });
 
     const QString& action = parser.positionalArguments().at(0);
     const QString& category = parser.positionalArguments().at(1);
     const QString& item = parser.positionalArguments().at(2);
+    const QString& filter = parser.value(filter_str);
+
+    static QRegExp filter_rgx(filter);
 
     if(action == "list")
     {
@@ -121,7 +135,23 @@ int main(int argc, char *argv[])
         }
     }else if(action == "delete")
     {
-
+        if(filter.isEmpty())
+        {
+            qDebug() << "Invalid filter, will not proceed";
+            QCoreApplication::exit();
+        }
+        if(category == "release")
+        {
+            QObject::connect(&github_daemon, &GithubFetch::repoUpdated,
+                             get_repo_releases);
+            QObject::connect(&github_daemon, &GithubFetch::releaseUpdated,
+                             [&](GithubRepo* repo, GithubRelease* rel)
+            {
+                if(rel->tagName().contains(filter_rgx))
+                    delete_release(repo, rel);
+            });
+            github_daemon.fetchRepo(item);
+        }
     }else if(action == "push")
     {
 

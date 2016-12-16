@@ -80,7 +80,8 @@ signals:
 private slots:
     void startNetworkRequest(const QString &url,
                              const QString &id,
-                             ReplyType receive);
+                             ReplyType receive,
+                             int page = 1);
     void receiveUserData();
 
     void registerProgress(qint64 rec, qint64 tot);
