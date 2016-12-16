@@ -1,19 +1,24 @@
+#include <QCommandLineParser>
+#include <QCommandLineOption>
+#include <QStringList>
+#include <QString>
+
+#include <github/githubfetch.h>
+
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-
-#include "github/githubfetch.h"
-
 #include <QtQml/QtQml>
 #include <QtQml/QJSValue>
 #include <QtQml/QJSEngine>
 
+const char* const application_identifier = "HBirchtree-Qthub-App";
+
 const char* github_token = nullptr;
-GithubFetch *m_github_daemon;
 QQmlApplicationEngine* m_engine;
 
 QObject* GenGithubDaemon(QQmlEngine*, QJSEngine*)
 {
-    GithubFetch* obj = new GithubFetch();
+    GithubFetch* obj = new GithubFetch(application_identifier);
 
     if(github_token)
         obj->authenticate(github_token);
@@ -28,20 +33,30 @@ int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
-    if(argc >= 2)
-        github_token = argv[1];
+    QCommandLineParser parser;
 
+    parser.addHelpOption();
+    parser.addVersionOption();
+
+    parser.addOption(QCommandLineOption("api-token", "Github API token",
+                                        "[API key]", "0x0"));
+
+    parser.process(app.arguments());
+
+    auto api_key_store = parser.value("api-token").toStdString();
+    github_token = api_key_store.c_str();
+
+    qDebug("[QML GUI]");
     qmlRegisterType<GithubFetch>("Qthub", 1, 0, "QthubDaemon");
     qmlRegisterType<GithubRepo>("Qthub", 1, 0, "QthubRepo");
     qmlRegisterType<GithubUser>("Qthub", 1, 0, "QthubUser");
     qmlRegisterType<GithubRelease>("Qthub", 1, 0, "QthubRelease");
 
-    qmlRegisterSingletonType<GithubFetch>("Qthub.daemon", 1, 0, "HubDaemon", GenGithubDaemon);
+    qmlRegisterSingletonType<GithubFetch>("Qthub.daemon", 1, 0,
+                                          "HubDaemon", GenGithubDaemon);
 
     QQmlApplicationEngine engine;
     m_engine = &engine;
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
-
-
     return app.exec();
 }

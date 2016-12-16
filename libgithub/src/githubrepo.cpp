@@ -1,4 +1,4 @@
-#include "githubrepo.h"
+#include <github/githubrepo.h>
 
 GithubRepo::GithubRepo(QObject *parent) : QObject(parent)
 {

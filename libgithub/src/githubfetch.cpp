@@ -1,4 +1,4 @@
-#include "githubfetch.h"
+#include <github/githubfetch.h>
 
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
@@ -78,6 +78,11 @@ void GithubFetch::addReleases(GithubRepo* r, QJsonArray const& rels)
 
 GithubFetch::GithubFetch(QObject *parent) : QObject(parent)
 {
+}
+
+GithubFetch::GithubFetch(QString identifier, QObject *parent) :
+    GithubFetch(parent)
+{
     m_netman = new QNetworkAccessManager();
 
     connect(m_netman, &QNetworkAccessManager::networkAccessibleChanged,
@@ -87,7 +92,7 @@ GithubFetch::GithubFetch(QObject *parent) : QObject(parent)
     });
 
     m_apipoint = "https://api.github.com";
-    m_agentstring = "HBirchtree-Qthub-App";
+    m_agentstring = identifier;
 
     qDebug() << "I will identify as: " << m_agentstring;
 }

@@ -27,8 +27,6 @@ Rectangle {
             width: 218
             height: 600
             delegate: Repository {
-                description: r.description
-                reponame: r.name
             }
         }
 

@@ -39,6 +39,7 @@ class GithubFetch : public QObject
 
 public:
     explicit GithubFetch(QObject *parent = 0);
+    explicit GithubFetch(QString identifier, QObject *parent = 0);
 
     QNetworkAccessManager::NetworkAccessibility status()
     {

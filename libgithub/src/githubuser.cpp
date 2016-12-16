@@ -1,5 +1,5 @@
-#include "githubuser.h"
-#include "githubrepo.h"
+#include <github/githubuser.h>
+#include <github/githubrepo.h>
 
 GithubUser::GithubUser(QObject *parent) : QObject(parent)
 {
