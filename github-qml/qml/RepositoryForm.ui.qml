@@ -1,6 +1,6 @@
 import QtQuick 2.4
-import QtQuick.Controls 1.5
-import QtQuick.Layouts 1.3
+import QtQuick.Controls 1.4
+import QtQuick.Layouts 1.2
 
 Item {
     id: item1
@@ -24,6 +24,7 @@ Item {
     Label {
         id: description
         text: qsTr("Label")
+        wrapMode: Text.WordWrap
         anchors.right: parent.right
         anchors.rightMargin: 6
         anchors.left: reponame.left

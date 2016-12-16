@@ -11,8 +11,10 @@ Rectangle {
     color: "#00000000"
     property alias button1: button1
     property alias progress: progress
+    property alias progressText: progressText
 
     property alias repoView: repoView
+    property alias repoList: repoList
 
     SplitView {
         id: splitView1
@@ -23,11 +25,10 @@ Rectangle {
         anchors.bottomMargin: 6
 
         ListView {
-            id: listView1
+            id: repoList
             width: 218
             height: 600
-            delegate: Repository {
-            }
+            delegate: Repository {}
         }
 
         Rectangle {
@@ -46,6 +47,10 @@ Rectangle {
 
             Repository {
                 id: repoView
+                anchors.left: parent.left
+                anchors.leftMargin: 0
+                anchors.right: parent.right
+                anchors.rightMargin: 0
             }
         }
     }
@@ -59,6 +64,14 @@ Rectangle {
         anchors.rightMargin: 8
         anchors.left: parent.left
         anchors.leftMargin: 8
-    }
 
+        Text {
+            id: progressText
+            text: qsTr("Text")
+            anchors.fill: parent
+            verticalAlignment: Text.AlignVCenter
+            horizontalAlignment: Text.AlignHCenter
+            font.pixelSize: 12
+        }
+    }
 }
