@@ -2,6 +2,7 @@ QT += network testlib
 
 QT -= gui
 
+
 TARGET = github
 TEMPLATE = lib
 CONFIG += c++11 staticlib create_prl

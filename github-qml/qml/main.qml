@@ -18,7 +18,7 @@ Window {
     function repoFound(repo)
     {
         var repo_view = mf.repoList.addDisplaced()
-        repo_view.setData(repo)<
+        repo_view.setData(repo)
     }
 
     function authError()

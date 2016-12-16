@@ -39,14 +39,14 @@ int main(int argc, char *argv[])
     parser.addVersionOption();
 
     parser.addOption(QCommandLineOption("api-token", "Github API token",
-                                        "[API key]", "0x0"));
+                                        "[API key]"));
 
     parser.process(app.arguments());
 
     auto api_key_store = parser.value("api-token").toStdString();
-    github_token = api_key_store.c_str();
+    if(api_key_store.size() > 0)
+        github_token = api_key_store.c_str();
 
-    qDebug("[QML GUI]");
     qmlRegisterType<GithubFetch>("Qthub", 1, 0, "QthubDaemon");
     qmlRegisterType<GithubRepo>("Qthub", 1, 0, "QthubRepo");
     qmlRegisterType<GithubUser>("Qthub", 1, 0, "QthubUser");

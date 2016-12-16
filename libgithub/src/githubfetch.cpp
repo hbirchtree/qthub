@@ -73,10 +73,12 @@ void GithubFetch::addReleases(GithubRepo* r, QJsonArray const& rels)
         rl->setDraft(m["draft"].toBool());
 
         r->addRelease(rl);
+
+        releaseUpdated(r, rl);
     }
 }
 
-GithubFetch::GithubFetch(QObject *parent) : QObject(parent)
+GithubFetch::GithubFetch(QObject *parent) : QObject(parent), m_activeTransfers(0)
 {
 }
 
@@ -94,7 +96,7 @@ GithubFetch::GithubFetch(QString identifier, QObject *parent) :
     m_apipoint = "https://api.github.com";
     m_agentstring = identifier;
 
-    qDebug() << "I will identify as: " << m_agentstring;
+    qDebug() << "Identifying as:" << m_agentstring;
 }
 
 void GithubFetch::addToken(QNetworkRequest &req)
@@ -122,6 +124,7 @@ void GithubFetch::startNetworkRequest(const QString &url,
             this, &GithubFetch::receiveUserData);
     connect(rep, &QNetworkReply::downloadProgress,
             this, &GithubFetch::registerProgress);
+    m_activeTransfers++;
 }
 
 void GithubFetch::fetchUser(const QString &username)
@@ -175,6 +178,7 @@ void GithubFetch::requestDelete(GithubRelease *release)
     rep->setProperty("type", GitReleaseDelete);
     connect(rep, &QNetworkReply::finished,
             this, &GithubFetch::receiveUserData);
+    m_activeTransfers++;
 }
 
 void GithubFetch::killAll()
@@ -184,12 +188,15 @@ void GithubFetch::killAll()
 
 void GithubFetch::receiveUserData()
 {
+    m_activeTransfers--;
+
     QObject* o = sender();
 
     if(o)
     {
         QNetworkReply* rep = dynamic_cast<QNetworkReply*>(o);
 
+        /* Check for error */
         switch(rep->error())
         {
         case QNetworkReply::NoError:
@@ -205,6 +212,7 @@ void GithubFetch::receiveUserData()
             return;
         }
 
+        /* Get the data */
         QByteArray rep_data = rep->readAll();
 
         QJsonParseError err;
@@ -257,6 +265,7 @@ void GithubFetch::receiveUserData()
 
             if(r)
                 addReleases(r, doc.array());
+
             break;
         }
         case GitReleaseDelete:
@@ -274,6 +283,29 @@ void GithubFetch::receiveUserData()
             break;
         }
         }
+
+        /* If data is paginated, get the next pages */
+        QString linkHeader = rep->rawHeader("Link");
+
+        if(!linkHeader.isEmpty())
+        {
+            static QRegExp exp("&page=(\\d+)>; rel=\"last\"");
+
+            qDebug() << linkHeader;
+            qDebug() << exp.indexIn(linkHeader);
+            qDebug() << exp.indexIn(linkHeader, exp.matchedLength());
+            qDebug() << exp.capturedTexts();
+            qDebug() << exp.errorString();
+
+            int next = 0;
+            int last = 0;
+
+            if(next == 2)
+                for(int i=0;i<=last;i++)
+                {
+
+                }
+        }
     }
 }
 
@@ -282,12 +314,13 @@ void GithubFetch::registerProgress(qint64 rec, qint64 tot)
     QNetworkReply* req = dynamic_cast<QNetworkReply*>(sender());
     if(req)
     {
-        qDebug() << "Download " << req->url() << " : " << rec << "/" << tot;
+//        qDebug() << "Download " << req->url() << " : " << rec << "/" << tot;
         reportProgress(req->url().toString(), rec, tot);
     }
 }
 
 void GithubFetch::authenticate(const QString &token)
 {
+    qDebug("Enabling OAuth authentication");
     m_token = token;
 }

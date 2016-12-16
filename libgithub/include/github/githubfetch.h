@@ -37,6 +37,8 @@ class GithubFetch : public QObject
     QString m_agentstring;
     QString m_token;
 
+    int m_activeTransfers;
+
 public:
     explicit GithubFetch(QObject *parent = 0);
     explicit GithubFetch(QString identifier, QObject *parent = 0);
@@ -44,6 +46,11 @@ public:
     QNetworkAccessManager::NetworkAccessibility status()
     {
         return m_netman->networkAccessible();
+    }
+
+    bool activeTransfers()
+    {
+        return m_activeTransfers > 0;
     }
 
 private:
@@ -58,6 +65,8 @@ private:
 signals:
     void userUpdated(GithubUser* user);
     void repoUpdated(GithubRepo* repo);
+
+    void releaseUpdated(GithubRepo* repo, GithubRelease* release);
 
     void authenticationError();
     void contentNotFound();
