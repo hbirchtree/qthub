@@ -78,12 +78,10 @@ void GithubFetch::addReleases(GithubRepo* r, QJsonArray const& rels)
     }
 }
 
-GithubFetch::GithubFetch(QObject *parent) : QObject(parent), m_activeTransfers(0)
-{
-}
-
-GithubFetch::GithubFetch(QString identifier, QObject *parent) :
-    GithubFetch(parent)
+GithubFetch::GithubFetch(QObject *parent) :
+    QObject(parent),
+    m_activeTransfers(0),
+    m_authenticated(false)
 {
     m_netman = new QNetworkAccessManager();
 
@@ -92,8 +90,18 @@ GithubFetch::GithubFetch(QString identifier, QObject *parent) :
     {
         statusChanged(acc);
     });
+    connect(this, &GithubFetch::selfUpdated,
+            [&](GithubUser*)
+    {
+        this->authenticated();
+    });
 
     m_apipoint = "https://api.github.com";
+}
+
+GithubFetch::GithubFetch(QString identifier, QObject *parent) :
+    GithubFetch(parent)
+{
     m_agentstring = identifier;
 
     qDebug() << "Identifying as:" << m_agentstring;
@@ -135,10 +143,18 @@ void GithubFetch::fetchUser(const QString &username)
                         username, GitUser);
 }
 
-void GithubFetch::fetchAllRepositories(GithubUser *user)
+void GithubFetch::fetchAllRepositories(GithubUser *user, bool owner)
 {
-    startNetworkRequest(QString("/users/%1/repos").arg(user->login()),
-                        user->login(), GitAllRepos);
+    static const char* const public_repo = "/users/%1/repos";
+    static const char* const private_repo = "/user/repos";
+
+    QString path;
+    if(owner)
+        path = private_repo;
+    else
+        path = QString(public_repo).arg(user->login());
+
+    startNetworkRequest(path, user->login(), GitAllRepos);
 }
 
 void GithubFetch::fetchRepo(const QString &reponame)
@@ -162,6 +178,16 @@ void GithubFetch::fetchRelease(GithubRepo *repo, quint64 relId)
                 .arg(repo->name()).arg(relId),
                 repo->name(),
                 GitRelease);
+}
+
+void GithubFetch::fetchSelf()
+{
+    if(m_token.size() >= 1)
+    {
+        startNetworkRequest("/user", ":self", GitUser);
+    }else{
+        qWarning() << "Cannot retrieve self, no API token";
+    }
 }
 
 void GithubFetch::requestDelete(GithubRelease *release)
@@ -228,17 +254,22 @@ void GithubFetch::receiveUserData()
         {
         case GitUser:
         {
-            GithubUser* u = m_users.value(o->property("id").toString());
+            QString obj_id = o->property("id").toString();
+            GithubUser* u = m_users.value(obj_id);
 
             if(!u)
             {
                 u = new GithubUser(this);
-                m_users.insert(o->property("id").toString(), u);
+                m_users.insert(obj_id, u);
             }
 
             updateUser(u, doc.object());
 
-            userUpdated(u);
+            if(obj_id == ":self")
+                selfUpdated(u);
+            else
+                userUpdated(u);
+
             break;
         }
         case GitRepo:

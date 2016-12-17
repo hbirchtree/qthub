@@ -22,6 +22,7 @@ const char* const application_identifier = "HBirchtree-Qthub-CLI-App";
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
+    QEventLoop ev;
 
     QCommandLineParser parser;
 
@@ -48,24 +49,40 @@ int main(int argc, char *argv[])
 
     parser.process(app.arguments());
 
+    if(parser.positionalArguments().size() < 3)
+    {
+        parser.showHelp();
+    }
+
     GithubFetch github_daemon(application_identifier, &app);
+    QString agent_login;
 
     if(!parser.value(api_token_str).isEmpty())
     {
         github_daemon.authenticate(parser.value(api_token_str));
     }
 
-    if(parser.positionalArguments().size() < 3)
+    /* Retrieve own user, we need to know */
+    /* Set up a trap, such that the program will stall for a bit */
+    auto self_conn = QObject::connect(&github_daemon, &GithubFetch::authenticated,
+                                      &ev, &QEventLoop::quit);
+    /* Do the assignment in the future */
+    QObject::connect(&github_daemon, &GithubFetch::selfUpdated,
+                     [&](GithubUser* self)
     {
-        parser.showHelp();
-    }
+        agent_login = self->name();
+    });
+
+    github_daemon.fetchSelf();
+
+    ev.exec();
 
     /* Listing functions */
     auto list_repo = [&](GithubRepo* r)
     {
         std::cout << r->name().toStdString() << std::endl;
-        if(!github_daemon.activeTransfers())
-            QCoreApplication::exit();
+//        if(!github_daemon.activeTransfers())
+//            QCoreApplication::exit();
     };
     auto list_release = [&](GithubRepo* r, GithubRelease* rl)
     {
@@ -93,6 +110,7 @@ int main(int argc, char *argv[])
         github_daemon.fetchAllRepositories(user);
     };
 
+    /* Error handling */
     QObject::connect(&github_daemon, &GithubFetch::contentNotFound,
                      [&](){
         qDebug() << "Failed to locate resource!";
@@ -108,6 +126,7 @@ int main(int argc, char *argv[])
         qDebug().noquote() << QString("Downloading resource: %1 (%2/%3)")
                               .arg(dl).arg(curr).arg(tot);
     });
+
 
     const QString& action = parser.positionalArguments().at(0);
     const QString& category = parser.positionalArguments().at(1);
@@ -159,7 +178,6 @@ int main(int argc, char *argv[])
         parser.showHelp();
     }
 
-    QEventLoop ev;
 
     return ev.exec();
 }

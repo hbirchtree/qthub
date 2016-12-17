@@ -39,6 +39,8 @@ class GithubFetch : public QObject
 
     int m_activeTransfers;
 
+    bool m_authenticated;
+
 public:
     explicit GithubFetch(QObject *parent = 0);
     explicit GithubFetch(QString identifier, QObject *parent = 0);
@@ -63,6 +65,10 @@ private:
     void addReleases(GithubRepo* u, QJsonArray const& rels);
 
 signals:
+    void selfUpdated(GithubUser* self);
+    void authenticated();
+    void authenticationNotPossible();
+
     void userUpdated(GithubUser* user);
     void repoUpdated(GithubRepo* repo);
 
@@ -90,10 +96,12 @@ public slots:
     void authenticate(QString const& token);
 
     void fetchUser(QString const& username);
-    void fetchAllRepositories(GithubUser* user);
+    void fetchAllRepositories(GithubUser* user, bool owner = false);
     void fetchRepo(QString const& reponame);
     void fetchAllReleases(GithubRepo* repo);
     void fetchRelease(GithubRepo* repo, quint64 relId);
+
+    void fetchSelf();
 
     void requestDelete(GithubRelease* release);
 
