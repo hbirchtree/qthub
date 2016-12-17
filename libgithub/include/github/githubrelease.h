@@ -25,13 +25,9 @@ class GithubRelease : public QObject
     QString m_name;
 
 QString m_tagName;
-
 QDateTime m_created;
-
 QDateTime m_published;
-
 bool m_prerelease;
-
 bool m_draft;
 
 public:

@@ -78,8 +78,23 @@ void GithubFetch::addReleases(GithubRepo* r, QJsonArray const& rels)
     }
 }
 
+void GithubFetch::addTags(GithubRepo *u, const QJsonArray &tags)
+{
+    for(int i=0;i<tags.size();i++)
+    {
+        auto const& m = tags[i].toObject();
+        GithubTag* tg = new GithubTag(u);
+
+        tg->setId(m["id"].toVariant().toULongLong());
+        tg->setName(m["name"].toString());
+        tg->setCommit(m["commit"].toObject()["sha"].toString());
+        tg->setTarballUrl(m["tarball_url"].toString());
+    }
+}
+
 GithubFetch::GithubFetch(QObject *parent) :
     QObject(parent),
+    m_self(nullptr),
     m_activeTransfers(0),
     m_authenticated(false)
 {
@@ -143,13 +158,13 @@ void GithubFetch::fetchUser(const QString &username)
                         username, GitUser);
 }
 
-void GithubFetch::fetchAllRepositories(GithubUser *user, bool owner)
+void GithubFetch::fetchAllRepositories(GithubUser *user)
 {
     static const char* const public_repo = "/users/%1/repos";
     static const char* const private_repo = "/user/repos";
 
     QString path;
-    if(owner)
+    if(m_self == user)
         path = private_repo;
     else
         path = QString(public_repo).arg(user->login());
@@ -169,6 +184,14 @@ void GithubFetch::fetchAllReleases(GithubRepo *repo)
                         .arg(repo->name()),
                         repo->name(),
                         GitAllReleases);
+}
+
+void GithubFetch::fetchAllTags(GithubRepo *repo)
+{
+    startNetworkRequest(QString("/repos/%1/tags")
+                        .arg(repo->name()),
+                        repo->name(),
+                        GitAllTags);
 }
 
 void GithubFetch::fetchRelease(GithubRepo *repo, quint64 relId)
@@ -231,6 +254,10 @@ void GithubFetch::receiveUserData()
         case QNetworkReply::ContentNotFoundError:
             contentNotFound();
             return;
+        case QNetworkReply::InternalServerError:
+            if(rep->rawHeader("Status") == "401 Unauthorized")
+                authenticationError();
+            return;
         case QNetworkReply::ServiceUnavailableError:
             authenticationError();
             return;
@@ -254,7 +281,8 @@ void GithubFetch::receiveUserData()
         {
         case GitUser:
         {
-            QString obj_id = o->property("id").toString();
+            auto dobj = doc.object();
+            QString obj_id = dobj["login"].toString();
             GithubUser* u = m_users.value(obj_id);
 
             if(!u)
@@ -265,11 +293,22 @@ void GithubFetch::receiveUserData()
 
             updateUser(u, doc.object());
 
-            if(obj_id == ":self")
+            if(o->property("id").toString() == ":self")
+            {
                 selfUpdated(u);
+                m_self = u;
+            }
             else
                 userUpdated(u);
 
+            break;
+        }
+        case GitAllRepos:
+        {
+            GithubUser* u = m_users.value(o->property("id").toString());
+
+            if(u)
+                addRepositories(u, doc.array());
             break;
         }
         case GitRepo:
@@ -287,16 +326,32 @@ void GithubFetch::receiveUserData()
             repoUpdated(r);
             break;
         }
-        case GitRelease:
+        case GitAllTags:
         {
+            GithubRepo* r = m_repos.value(o->property("id").toString());
+
+            if(r)
+                addTags(r, doc.array());
+
             break;
         }
         case GitAllReleases:
         {
             GithubRepo* r = m_repos.value(o->property("id").toString());
 
+
             if(r)
                 addReleases(r, doc.array());
+
+            break;
+        }
+        case GitRelease:
+        {
+            GithubRepo* r = m_repos.value(o->property("id").toString());
+
+            QJsonArray arr = {doc.object()};
+            if(r)
+                addReleases(r, arr);
 
             break;
         }
@@ -306,19 +361,12 @@ void GithubFetch::receiveUserData()
                         " with status " << rep->rawHeader("Status");
             break;
         }
-        case GitAllRepos:
-        {
-            GithubUser* u = m_users.value(o->property("id").toString());
-
-            if(u)
-                addRepositories(u, doc.array());
-            break;
-        }
         }
 
         qDebug().nospace().noquote()
                 << "Rate limit: "
-                << rep->rawHeader("X-RateLimit-Remaining") << "/" << rep->rawHeader("X-RateLimit-Limit");
+                << rep->rawHeader("X-RateLimit-Remaining") << "/"
+                << rep->rawHeader("X-RateLimit-Limit");
 
         /* If data is paginated, get the next pages */
         QString linkHeader = rep->rawHeader("Link");
@@ -340,10 +388,11 @@ void GithubFetch::receiveUserData()
                     if(next == 2)
                         for(int i=2;i<=last;i++)
                         {
-                            startNetworkRequest(req.url().path().split("?").at(0),
-                                                rep->property("id").toString(),
-                                                static_cast<ReplyType>(rep->property("type").toInt()),
-                                                i);
+                            startNetworkRequest(
+                                        req.url().path().split("?").at(0),
+                                        rep->property("id").toString(),
+                                        static_cast<ReplyType>(rep->property("type").toInt()),
+                                        i);
                         }
                 }
             }

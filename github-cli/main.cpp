@@ -5,6 +5,7 @@
 #include <QString>
 
 #include <future>
+#include <functional>
 #include <iostream>
 
 #include <github/githubfetch.h>
@@ -19,6 +20,29 @@ const char* const item_str = "item";
 /* Application identifier, change this if you fork this */
 const char* const application_identifier = "HBirchtree-Qthub-CLI-App";
 
+struct ProcessingContext
+{
+    /* Objects */
+    GithubFetch* github_daemon;
+
+    /* Slots */
+    std::function<void(GithubRepo*)> list_repo;
+    std::function<void(GithubRepo*,GithubRelease*)> list_release;
+    std::function<void(GithubRepo*,GithubRelease*)> list_tag;
+
+    std::function<void(GithubUser*)> get_user_repos;
+    std::function<void(GithubRepo*)> get_repo_releases;
+
+    std::function<void(GithubRepo*,GithubRelease*)> delete_release;
+};
+
+static void processInputs(QCommandLineParser& parser,
+                          ProcessingContext& c,
+                          QString const& action,
+                          QString const& category,
+                          QString const& item,
+                          QString const& filter);
+
 int main(int argc, char *argv[])
 {
     QCoreApplication app(argc, argv);
@@ -29,9 +53,11 @@ int main(int argc, char *argv[])
     parser.addHelpOption();
     parser.addVersionOption();
 
-    parser.addOption(QCommandLineOption(api_token_str, "Github API token",
+    parser.addOption(QCommandLineOption(api_token_str,
+                                        "Github API token",
                                         "<API key>"));
-    parser.addOption(QCommandLineOption(filter_str, "Filter for resources [releases, tags, files]",
+    parser.addOption(QCommandLineOption(filter_str,
+                                        "Filter for resources [releases, tags, files]",
                                         "<^.*[0-9a-z]+.*$>"));
 
     parser.addPositionalArgument(
@@ -40,7 +66,8 @@ int main(int argc, char *argv[])
                 "[action]");
     parser.addPositionalArgument(
                 category_str,
-                "Category to perform action on [user, repository, tag, release, release-file]",
+                "Category to perform action on "
+                "[user, repository, tag, release, release-file]",
                 "[category]");
     parser.addPositionalArgument(
                 item_str,
@@ -55,27 +82,12 @@ int main(int argc, char *argv[])
     }
 
     GithubFetch github_daemon(application_identifier, &app);
-    QString agent_login;
 
     if(!parser.value(api_token_str).isEmpty())
     {
         github_daemon.authenticate(parser.value(api_token_str));
     }
 
-    /* Retrieve own user, we need to know */
-    /* Set up a trap, such that the program will stall for a bit */
-    auto self_conn = QObject::connect(&github_daemon, &GithubFetch::authenticated,
-                                      &ev, &QEventLoop::quit);
-    /* Do the assignment in the future */
-    QObject::connect(&github_daemon, &GithubFetch::selfUpdated,
-                     [&](GithubUser* self)
-    {
-        agent_login = self->name();
-    });
-
-    github_daemon.fetchSelf();
-
-    ev.exec();
 
     /* Listing functions */
     auto list_repo = [&](GithubRepo* r)
@@ -110,6 +122,29 @@ int main(int argc, char *argv[])
         github_daemon.fetchAllRepositories(user);
     };
 
+    /* Function pointers and etc. to pass on to processing */
+    ProcessingContext ctxt = {
+        &github_daemon,
+
+        list_repo,
+        list_release,
+
+        get_user_repos,
+        get_repo_releases,
+
+        delete_release
+    };
+
+    auto launch_processing = [&]()
+    {
+        const QString& action = parser.positionalArguments().at(0);
+        const QString& category = parser.positionalArguments().at(1);
+        const QString& item = parser.positionalArguments().at(2);
+        const QString& filter = parser.value(filter_str);
+
+        processInputs(parser, ctxt, action, category, item, filter);
+    };
+
     /* Error handling */
     QObject::connect(&github_daemon, &GithubFetch::contentNotFound,
                      [&](){
@@ -127,30 +162,45 @@ int main(int argc, char *argv[])
                               .arg(dl).arg(curr).arg(tot);
     });
 
+    QObject::connect(&github_daemon, &GithubFetch::authenticated,
+                     launch_processing);
+    QObject::connect(&github_daemon, &GithubFetch::authenticationError,
+                     launch_processing);
 
-    const QString& action = parser.positionalArguments().at(0);
-    const QString& category = parser.positionalArguments().at(1);
-    const QString& item = parser.positionalArguments().at(2);
-    const QString& filter = parser.value(filter_str);
+    /* Retrieve own user, we need to know */
+    /* We do this to ensure that private repositories are visible
+     *  if authorization is provided.
+     */
+    github_daemon.fetchSelf();
 
+    return ev.exec();
+}
+
+void processInputs(QCommandLineParser& parser,
+                   ProcessingContext& c,
+                   QString const& action,
+                   QString const& category,
+                   QString const& item,
+                   QString const& filter)
+{
     static QRegExp filter_rgx(filter);
 
     if(action == "list")
     {
         if(category == "repository")
         {
-            QObject::connect(&github_daemon, &GithubFetch::repoUpdated,
-                             list_repo);
-            QObject::connect(&github_daemon, &GithubFetch::userUpdated,
-                             get_user_repos);
-            github_daemon.fetchUser(item);
+            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                             c.list_repo);
+            QObject::connect(c.github_daemon, &GithubFetch::userUpdated,
+                             c.get_user_repos);
+            c.github_daemon->fetchUser(item);
         }else if(category == "release")
         {
-            QObject::connect(&github_daemon, &GithubFetch::repoUpdated,
-                             get_repo_releases);
-            QObject::connect(&github_daemon, &GithubFetch::releaseUpdated,
-                             list_release);
-            github_daemon.fetchRepo(item);
+            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                             c.get_repo_releases);
+            QObject::connect(c.github_daemon, &GithubFetch::releaseUpdated,
+                             c.list_release);
+            c.github_daemon->fetchRepo(item);
         }
     }else if(action == "delete")
     {
@@ -161,23 +211,20 @@ int main(int argc, char *argv[])
         }
         if(category == "release")
         {
-            QObject::connect(&github_daemon, &GithubFetch::repoUpdated,
-                             get_repo_releases);
-            QObject::connect(&github_daemon, &GithubFetch::releaseUpdated,
+            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                             c.get_repo_releases);
+            QObject::connect(c.github_daemon, &GithubFetch::releaseUpdated,
                              [&](GithubRepo* repo, GithubRelease* rel)
             {
                 if(rel->tagName().contains(filter_rgx))
-                    delete_release(repo, rel);
+                    c.delete_release(repo, rel);
             });
-            github_daemon.fetchRepo(item);
+            c.github_daemon->fetchRepo(item);
         }
     }else if(action == "push")
     {
-
+        QCoreApplication::exit();
     }else{
         parser.showHelp();
     }
-
-
-    return ev.exec();
 }

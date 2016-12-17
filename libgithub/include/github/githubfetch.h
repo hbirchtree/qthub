@@ -25,12 +25,16 @@ class GithubFetch : public QObject
         GitAllRepos,
         GitRelease,
         GitAllReleases,
+        GitTag,
+        GitAllTags,
 
         GitReleaseDelete,
     };
 
     QMap<QString, GithubUser*> m_users;
     QMap<QString, GithubRepo*> m_repos;
+
+    GithubUser* m_self;
 
     QNetworkAccessManager* m_netman;
     QString m_apipoint;
@@ -63,16 +67,17 @@ private:
 
     void addRepositories(GithubUser* u, QJsonArray const& repos);
     void addReleases(GithubRepo* u, QJsonArray const& rels);
+    void addTags(GithubRepo* u, QJsonArray const& tags);
 
 signals:
     void selfUpdated(GithubUser* self);
     void authenticated();
-    void authenticationNotPossible();
 
     void userUpdated(GithubUser* user);
     void repoUpdated(GithubRepo* repo);
 
     void releaseUpdated(GithubRepo* repo, GithubRelease* release);
+    void tagUpdated(GithubRepo* repo, GithubTag* tag);
 
     void authenticationError();
     void contentNotFound();
@@ -96,10 +101,12 @@ public slots:
     void authenticate(QString const& token);
 
     void fetchUser(QString const& username);
-    void fetchAllRepositories(GithubUser* user, bool owner = false);
     void fetchRepo(QString const& reponame);
-    void fetchAllReleases(GithubRepo* repo);
     void fetchRelease(GithubRepo* repo, quint64 relId);
+
+    void fetchAllRepositories(GithubUser* user);
+    void fetchAllReleases(GithubRepo* repo);
+    void fetchAllTags(GithubRepo* repo);
 
     void fetchSelf();
 

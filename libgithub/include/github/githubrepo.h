@@ -2,6 +2,7 @@
 #define GITHUBREPO_H
 
 #include "githubrelease.h"
+#include "githubtag.h"
 
 #include <QObject>
 #include <QDateTime>
@@ -42,6 +43,7 @@ class GithubRepo : public QObject
     quint64 m_subscribers;
 
     QVector<GithubRelease*> m_releases;
+    QVector<GithubTag*> m_tags;
 
 public:
     explicit GithubRepo(QObject *parent = 0);
