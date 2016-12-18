@@ -88,6 +88,8 @@ signals:
 
     void reportProgress(QString const& dl, qint64 rec, qint64 tot);
 
+    void transferCompleted();
+
 private slots:
     void startNetworkRequest(const QString &url,
                              const QString &id,

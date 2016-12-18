@@ -10,12 +10,10 @@ class GithubTag : public QObject
 {
     Q_OBJECT
 
-    Q_PROPERTY(quint64 id READ id WRITE setId)
     Q_PROPERTY(QString name READ name WRITE setName)
     Q_PROPERTY(QString commit READ commit WRITE setCommit)
     Q_PROPERTY(QUrl tarballUrl READ tarballUrl WRITE setTarballUrl)
 
-    quint64 m_id;
     QString m_name;
     QString m_commit;
     QUrl m_tarballUrl;
@@ -23,10 +21,6 @@ class GithubTag : public QObject
 public:
     explicit GithubTag(QObject* parent = 0);
 
-    quint64 id() const
-    {
-        return m_id;
-    }
     QString name() const
     {
         return m_name;
@@ -43,10 +37,6 @@ public:
     }
 
 public slots:
-    void setId(quint64 id)
-    {
-        m_id = id;
-    }
     void setName(QString name)
     {
         m_name = name;

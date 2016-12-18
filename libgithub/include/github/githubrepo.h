@@ -50,9 +50,11 @@ public:
 
 public slots:
     void addRelease(GithubRelease* rel);
+    void addTag(GithubTag* tag);
 
 signals:
     void releaseAdded(QPointer<GithubRelease> rel);
+    void tagAdded(QPointer<GithubTag> tag);
 
 public:
     quint64 id() const
@@ -101,7 +103,6 @@ public:
     }
 
 signals:
-
     void idChanged(quint64 id);
     void nameChanged(QString name);
     void titleChanged(QString title);
@@ -111,7 +112,6 @@ signals:
     void forksChanged(quint64 forks);
     void subscribersChanged(quint64 subscribers);
     void createdChanged(QDateTime created);
-
 
 public slots:
 

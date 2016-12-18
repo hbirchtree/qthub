@@ -85,10 +85,11 @@ void GithubFetch::addTags(GithubRepo *u, const QJsonArray &tags)
         auto const& m = tags[i].toObject();
         GithubTag* tg = new GithubTag(u);
 
-        tg->setId(m["id"].toVariant().toULongLong());
         tg->setName(m["name"].toString());
         tg->setCommit(m["commit"].toObject()["sha"].toString());
         tg->setTarballUrl(m["tarball_url"].toString());
+
+        tagUpdated(u, tg);
     }
 }
 
@@ -109,6 +110,11 @@ GithubFetch::GithubFetch(QObject *parent) :
             [&](GithubUser*)
     {
         this->authenticated();
+    });
+    connect(this, &GithubFetch::transferCompleted,
+            [&]()
+    {
+        m_activeTransfers--;
     });
 
     m_apipoint = "https://api.github.com";
@@ -210,6 +216,7 @@ void GithubFetch::fetchSelf()
         startNetworkRequest("/user", ":self", GitUser);
     }else{
         qWarning() << "Cannot retrieve self, no API token";
+        authenticationError();
     }
 }
 
@@ -238,7 +245,6 @@ void GithubFetch::killAll()
 
 void GithubFetch::receiveUserData()
 {
-    m_activeTransfers--;
 
     QObject* o = sender();
 
@@ -252,17 +258,21 @@ void GithubFetch::receiveUserData()
         case QNetworkReply::NoError:
             break;
         case QNetworkReply::ContentNotFoundError:
+            transferCompleted();
             contentNotFound();
             return;
         case QNetworkReply::InternalServerError:
             if(rep->rawHeader("Status") == "401 Unauthorized")
                 authenticationError();
+            transferCompleted();
             return;
         case QNetworkReply::ServiceUnavailableError:
             authenticationError();
+            transferCompleted();
             return;
         default:
             networkReplyError(rep->error());
+            transferCompleted();
             return;
         }
 
@@ -397,7 +407,10 @@ void GithubFetch::receiveUserData()
                 }
             }
         }
+
+        transferCompleted();
     }
+
 }
 
 void GithubFetch::registerProgress(qint64 rec, qint64 tot)
