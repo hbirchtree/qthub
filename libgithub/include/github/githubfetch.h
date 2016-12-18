@@ -22,13 +22,17 @@ class GithubFetch : public QObject
         GitNone,
         GitRepo,
         GitUser,
-        GitAllRepos,
         GitRelease,
+
+        GitAllRepos,
         GitAllReleases,
-        GitTag,
         GitAllTags,
+        GitAllAssets,
 
         GitReleaseDelete,
+
+        GitDownload,
+        GitUpload,
     };
 
     QMap<QString, GithubUser*> m_users;
@@ -69,26 +73,29 @@ private:
     void addReleases(GithubRepo* u, QJsonArray const& rels);
     void addTags(GithubRepo* u, QJsonArray const& tags);
 
+    void addAssets(GithubRelease* r, QJsonArray const& assets);
+
 signals:
-    void selfUpdated(GithubUser* self);
-    void authenticated();
-
-    void userUpdated(GithubUser* user);
-    void repoUpdated(GithubRepo* repo);
-
-    void releaseUpdated(GithubRepo* repo, GithubRelease* release);
-    void tagUpdated(GithubRepo* repo, GithubTag* tag);
-
-    void authenticationError();
-    void contentNotFound();
-
-    void networkReplyError(int errorCode);
-
     void statusChanged(QNetworkAccessManager::NetworkAccessibility acc);
 
+    /* Progression signals */
     void reportProgress(QString const& dl, qint64 rec, qint64 tot);
 
+    /* Errors */
+    void authenticationError();
+    void contentNotFound();
+    void networkReplyError(int errorCode);
+
+    /* Completion signals */
+    void authenticated();
     void transferCompleted();
+
+    void selfUpdated(GithubUser* self);
+    void userUpdated(GithubUser* user);
+    void repoUpdated(GithubRepo* repo);
+    void releaseUpdated(GithubRepo* repo, GithubRelease* release);
+    void tagUpdated(GithubRepo* repo, GithubTag* tag);
+    void assetUpdated(GithubRepo* repo, GithubRelease* release, GithubAsset* file);
 
 private slots:
     void startNetworkRequest(const QString &url,

@@ -29,6 +29,9 @@ class GithubRepo : public QObject
     Q_PROPERTY(quint64 forks READ forks WRITE setForks NOTIFY forksChanged)
     Q_PROPERTY(quint64 subscribers READ subscribers WRITE setSubscribers NOTIFY subscribersChanged)
 
+    Q_PROPERTY(QVector<GithubTag*> tags READ tags)
+    Q_PROPERTY(QVector<GithubRelease*> releases READ releases)
+
     quint64 m_id;
     QString m_name;
     QString m_title;
@@ -47,6 +50,15 @@ class GithubRepo : public QObject
 
 public:
     explicit GithubRepo(QObject *parent = 0);
+
+    QVector<GithubTag*> const& tags() const
+    {
+        return m_tags;
+    }
+    QVector<GithubRelease*> const& releases() const
+    {
+        return m_releases;
+    }
 
 public slots:
     void addRelease(GithubRelease* rel);

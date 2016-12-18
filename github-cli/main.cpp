@@ -57,8 +57,6 @@ int main(int argc, char *argv[])
     QString separator = "|";
 
     QCoreApplication app(argc, argv);
-    QEventLoop ev;
-
     QCommandLineParser parser;
 
     parser.addHelpOption();
@@ -66,22 +64,43 @@ int main(int argc, char *argv[])
 
     parser.addOption(QCommandLineOption(api_token_str,
                                         "Github API token",
-                                        "<API key>"));
+                                        "API key"));
     parser.addOption(QCommandLineOption(filter_str,
                                         "Filter for resources [releases, tags, files]",
-                                        "<^.*[0-9a-z]+.*$>"));
+                                        "^.*[0-9a-z]+.*$"));
     parser.addOption(QCommandLineOption(separator_str,
                                         "Separator for output data",
-                                        "<|>"));
+                                        "|"));
 
     parser.addPositionalArgument(
                 action_str,
-                "Action to perform [list, show, delete, push]",
+                "Action to perform [list, show, delete, push, pull, merge]\n"
+                "Action matrix: \n"
+
+                "list [repository] [username]\n"
+                "list [tag|release|release-file|pr] [repo]\n"
+
+                "show [tag|release] [repo] [name]\n"
+                "show pr [repo] [id]\n"
+                "show release-file [repo:release] [id]\n"
+
+                "delete release [repo] [name]\n"
+                "delete release-file [repo:release] [id]\n"
+                "delete pr [repo] [id]\n"
+
+                "push release [repo] [name]\n"
+                "push release-file [repo:release] [name]\n"
+                "push pr [repo] [name]\n"
+
+                "pull [tag|release] [repo] [name]\n"
+                "pull release-file [repo:release] [id]\n"
+                ,
+
                 "[action]");
     parser.addPositionalArgument(
                 category_str,
                 "Category to perform action on "
-                "[user, repository, tag, release, release-file]",
+                "[user, repository, tag, release, release-file, pr]",
                 "[category]");
     parser.addPositionalArgument(
                 item_str,
@@ -115,13 +134,15 @@ int main(int argc, char *argv[])
     auto list_release = [&](GithubRepo* r, GithubRelease* rl)
     {
         std::cout << rl->id() << " "
-                  << r->name().toStdString() << ":" << rl->tagName().toStdString()
+                  << r->name().toStdString() << separator.toStdString()
+                  << rl->tagName().toStdString()
                   << std::endl;
     };
     auto list_tag = [&](GithubRepo* r, GithubTag* tag)
     {
-        std::cout << r->name().toStdString() << ":" << tag->name().toStdString()
-                  << " > " << tag->commit().toStdString()
+        std::cout << r->name().toStdString() << separator.toStdString()
+                  << tag->name().toStdString() << separator.toStdString()
+                  << tag->commit().toStdString()
                   << std::endl;
     };
 
@@ -131,7 +152,7 @@ int main(int argc, char *argv[])
         std::cout
                 << u->login().toStdString() << separator.toStdString()
                 << u->name().toStdString() << separator.toStdString()
-                << u->registered().toString().toStdString() << separator.toStdString()
+                << u->registered().toString().toStdString()
                 << std::endl;
     };
     auto show_repo = [&](GithubRepo* r)
@@ -140,23 +161,23 @@ int main(int argc, char *argv[])
                 << r->name().toStdString() << separator.toStdString()
                 << r->description().toStdString() << separator.toStdString()
                 << r->language().toStdString() << separator.toStdString()
-                << r->created().toString().toStdString() << separator.toStdString()
+                << r->created().toString().toStdString()
                 << std::endl;
     };
-    auto show_release = [&](GithubRepo* repo, GithubRelease* r)
+    auto show_release = [&](GithubRepo*, GithubRelease* r)
     {
         std::cout
                 << r->id() << separator.toStdString()
                 << r->name().toStdString() << separator.toStdString()
-                << r->tagName().toStdString() << separator.toStdString()
+                << r->tagName().toStdString()
                 << std::endl;
     };
-    auto show_tag = [&](GithubRepo* repo, GithubTag* tag)
+    auto show_tag = [&](GithubRepo*, GithubTag* tag)
     {
         std::cout
                 << tag->name().toStdString() << separator.toStdString()
                 << tag->commit().toStdString() << separator.toStdString()
-                << tag->tarballUrl().toString().toStdString() << separator.toStdString()
+                << tag->tarballUrl().toString().toStdString()
                 << std::endl;
     };
 
@@ -167,7 +188,7 @@ int main(int argc, char *argv[])
         list_release(repo, rl);
     };
 
-    /* Recursion functions */
+    /* Deepening functions */
     auto get_repo_releases = [&](GithubRepo* repo)
     {
         github_daemon.fetchAllReleases(repo);
@@ -249,7 +270,7 @@ int main(int argc, char *argv[])
      */
     github_daemon.fetchSelf();
 
-    return ev.exec();
+    return app.exec();
 }
 
 void processInputs(QCommandLineParser& parser,
@@ -342,7 +363,7 @@ void processInputs(QCommandLineParser& parser,
         if(item2.isEmpty())
         {
             qDebug() << "Invalid filter, will not proceed";
-            QCoreApplication::exit();
+            QCoreApplication::exit(1);
         }
 
         filter_rgx = QRegExp(item2);
@@ -364,8 +385,29 @@ void processInputs(QCommandLineParser& parser,
         }
     }else if(action == "push")
     {
-        QCoreApplication::exit();
+        if(category == "release")
+        {
+
+        }else if(category == "repository")
+        {
+
+        }else if(category == "release-file")
+        {
+
+        }else
+            QCoreApplication::exit();
+    }else if(action == "pull")
+    {
+        if(category == "release-file")
+        {
+
+        }else if(category == "tag")
+        {
+
+        }else
+            QCoreApplication::exit(1);
     }else{
-        parser.showHelp();
+        qDebug() << "Invalid action:" << action;
+        parser.showHelp(1);
     }
 }

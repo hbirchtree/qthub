@@ -72,6 +72,8 @@ void GithubFetch::addReleases(GithubRepo* r, QJsonArray const& rels)
             rl->setTagName(m["tag_name"].toString());
         rl->setDraft(m["draft"].toBool());
 
+        addAssets(rl, m["assets"].toArray());
+
         r->addRelease(rl);
 
         releaseUpdated(r, rl);
@@ -89,7 +91,32 @@ void GithubFetch::addTags(GithubRepo *u, const QJsonArray &tags)
         tg->setCommit(m["commit"].toObject()["sha"].toString());
         tg->setTarballUrl(m["tarball_url"].toString());
 
+        u->addTag(tg);
         tagUpdated(u, tg);
+    }
+}
+
+void GithubFetch::addAssets(GithubRelease *r, const QJsonArray &assets)
+{
+    GithubRepo* repo = dynamic_cast<GithubRepo*>(r->parent());
+    for(int i=0;i<assets.size();i++)
+    {
+        auto const& m = assets[i].toObject();
+        GithubAsset* at = new GithubAsset(r);
+
+        at->setId(m["id"].toVariant().toULongLong());
+        at->setName(m["name"].toString());
+        at->setUploader(m["uploader"].toObject()["login"].toString());
+        at->setLabel(m["label"].toString());
+        at->setType(m["content_type"].toString());
+        at->setSize(m["size"].toVariant().toULongLong());
+        at->setDownloads(m["download_count"].toVariant().toULongLong());
+        at->setDownloadUrl(m["browser_download_url"].toVariant().toUrl());
+
+        at->setUpdated(m["updated_at"].toVariant().toDateTime());
+
+        r->addAsset(at);
+        assetUpdated(repo, r, at);
     }
 }
 

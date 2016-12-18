@@ -4,6 +4,9 @@
 #include <QObject>
 #include <QString>
 #include <QDateTime>
+#include <QVector>
+
+#include "githubreleasefile.h"
 
 class GithubRelease : public QObject
 {
@@ -20,127 +23,131 @@ class GithubRelease : public QObject
     Q_PROPERTY(bool prerelease READ prerelease WRITE setPrerelease NOTIFY prereleaseChanged)
     Q_PROPERTY(bool draft READ draft WRITE setDraft NOTIFY draftChanged)
 
+    Q_PROPERTY(QVector<GithubAsset*> assets READ assets)
+
     quint64 m_id;
-
     QString m_name;
+    QString m_tagName;
+    QDateTime m_created;
+    QDateTime m_published;
+    bool m_prerelease;
+    bool m_draft;
 
-QString m_tagName;
-QDateTime m_created;
-QDateTime m_published;
-bool m_prerelease;
-bool m_draft;
+    QVector<GithubAsset*> m_assets;
 
 public:
     explicit GithubRelease(QObject *parent = 0);
 
-quint64 id() const
-{
-    return m_id;
-}
+    QVector<GithubAsset*> const& assets() const
+    {
+        return m_assets;
+    }
 
-QString name() const
-{
-    return m_name;
-}
+    quint64 id() const
+    {
+        return m_id;
+    }
 
-QString tagName() const
-{
-    return m_tagName;
-}
+    QString name() const
+    {
+        return m_name;
+    }
 
-QDateTime created() const
-{
-    return m_created;
-}
+    QString tagName() const
+    {
+        return m_tagName;
+    }
 
-QDateTime published() const
-{
-    return m_published;
-}
+    QDateTime created() const
+    {
+        return m_created;
+    }
 
-bool prerelease() const
-{
-    return m_prerelease;
-}
+    QDateTime published() const
+    {
+        return m_published;
+    }
 
-bool draft() const
-{
-    return m_draft;
-}
+    bool prerelease() const
+    {
+        return m_prerelease;
+    }
+
+    bool draft() const
+    {
+        return m_draft;
+    }
 
 signals:
+    void idChanged(quint64 id);
+    void nameChanged(QString name);
+    void tagNameChanged(QString tagName);
+    void createdChanged(QDateTime created);
+    void publishedChanged(QDateTime published);
+    void prereleaseChanged(bool prerelease);
+    void draftChanged(bool draft);
 
-void idChanged(quint64 id);
-
-void nameChanged(QString name);
-
-void tagNameChanged(QString tagName);
-
-void createdChanged(QDateTime created);
-
-void publishedChanged(QDateTime published);
-
-void prereleaseChanged(bool prerelease);
-
-void draftChanged(bool draft);
+    void assetAdded(GithubAsset* asset);
 
 public slots:
-void setId(quint64 id)
-{
-    if (m_id == id)
-        return;
+    void addAsset(GithubAsset* asset);
 
-    m_id = id;
-    emit idChanged(id);
-}
-void setName(QString name)
-{
-    if (m_name == name)
-        return;
+    void setId(quint64 id)
+    {
+        if (m_id == id)
+            return;
 
-    m_name = name;
-    emit nameChanged(name);
-}
-void setTagName(QString tagName)
-{
-    if (m_tagName == tagName)
-        return;
+        m_id = id;
+        emit idChanged(id);
+    }
+    void setName(QString name)
+    {
+        if (m_name == name)
+            return;
 
-    m_tagName = tagName;
-    emit tagNameChanged(tagName);
-}
-void setCreated(QDateTime created)
-{
-    if (m_created == created)
-        return;
+        m_name = name;
+        emit nameChanged(name);
+    }
+    void setTagName(QString tagName)
+    {
+        if (m_tagName == tagName)
+            return;
 
-    m_created = created;
-    emit createdChanged(created);
-}
-void setPublished(QDateTime published)
-{
-    if (m_published == published)
-        return;
+        m_tagName = tagName;
+        emit tagNameChanged(tagName);
+    }
+    void setCreated(QDateTime created)
+    {
+        if (m_created == created)
+            return;
 
-    m_published = published;
-    emit publishedChanged(published);
-}
-void setPrerelease(bool prerelease)
-{
-    if (m_prerelease == prerelease)
-        return;
+        m_created = created;
+        emit createdChanged(created);
+    }
+    void setPublished(QDateTime published)
+    {
+        if (m_published == published)
+            return;
 
-    m_prerelease = prerelease;
-    emit prereleaseChanged(prerelease);
-}
-void setDraft(bool draft)
-{
-    if (m_draft == draft)
-        return;
+        m_published = published;
+        emit publishedChanged(published);
+    }
+    void setPrerelease(bool prerelease)
+    {
+        if (m_prerelease == prerelease)
+            return;
 
-    m_draft = draft;
-    emit draftChanged(draft);
-}
+        m_prerelease = prerelease;
+        emit prereleaseChanged(prerelease);
+    }
+    void setDraft(bool draft)
+    {
+        if (m_draft == draft)
+            return;
+
+        m_draft = draft;
+        emit draftChanged(draft);
+    }
 };
 
 #endif // GITHUBRELEASE_H
