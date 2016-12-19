@@ -42,11 +42,21 @@ void GithubFetch::updateRepo(GithubRepo* r, QJsonObject const& o)
 {
     r->setId(o["id"].toVariant().toULongLong());
 
+    r->setCreated(o["created_at"].toVariant().toDateTime());
     r->setName(o["full_name"].toString());
     r->setDescription(o["description"].toString());
 
     r->setLanguage(o["language"].toString());
+
     r->setIssues(o["open_issues"].toVariant().toULongLong());
+    r->setForks(o["forks_count"].toVariant().toULongLong());
+    r->setSubscribers(o["subscribers_count"].toVariant().toULongLong());
+    r->setWatchers(o["watchers_count"].toVariant().toULongLong());
+
+    r->setBranch(o["default_branch"].toString());
+
+    r->setOwner(o["owner"].toObject()["login"].toString());
+    r->setSourceId(o["source"].toObject()[""].toVariant().toULongLong());
 }
 
 void GithubFetch::addRepositories(GithubUser* u, QJsonArray const& repos)
@@ -75,13 +85,16 @@ void GithubFetch::addReleases(GithubRepo* r, QJsonArray const& rels)
 
         if(!m["tag_name"].isNull())
             rl->setTagName(m["tag_name"].toString());
+        rl->setBranch(m["target_commitish"].toString());
         rl->setName(m["name"].toString());
         rl->setAuthor(m["author"].toObject()["login"].toString());
 
         rl->setDescription(m["body"].toString());
         rl->setDraft(m["draft"].toBool());
         rl->setPrerelease(m["prerelease"].toBool());
+
         rl->setPublished(m["published_at"].toVariant().toDateTime());
+        rl->setCreated(m["created_at"].toVariant().toDateTime());
 
         addAssets(rl, m["assets"].toArray());
 
@@ -269,6 +282,7 @@ void GithubFetch::requestDelete(GithubRelease *release)
     addToken(req);
 
     QNetworkReply* rep = m_netman->deleteResource(req);
+    qDebug() << "Delete:" << req.url();
     rep->setProperty("type", GitReleaseDelete);
     connect(rep, &QNetworkReply::finished,
             this, &GithubFetch::receiveUserData);

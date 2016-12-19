@@ -18,6 +18,7 @@ class GithubRelease : public QObject
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
     Q_PROPERTY(QString description READ description WRITE setDescription)
     Q_PROPERTY(QString tagName READ tagName WRITE setTagName NOTIFY tagNameChanged)
+    Q_PROPERTY(QString branch READ branch WRITE setBranch)
 
     Q_PROPERTY(QString author READ author WRITE setAuthor)
 
@@ -33,6 +34,7 @@ class GithubRelease : public QObject
     QString m_name;
     QString m_description;
     QString m_tagName;
+    QString m_branch;
     QString m_author;
     QDateTime m_created;
     QDateTime m_published;
@@ -94,6 +96,11 @@ public:
     QString author() const
     {
         return m_author;
+    }
+
+    QString branch() const
+    {
+        return m_branch;
     }
 
 signals:
@@ -173,6 +180,10 @@ public slots:
     void setAuthor(QString author)
     {
         m_author = author;
+    }
+    void setBranch(QString branch)
+    {
+        m_branch = branch;
     }
 };
 

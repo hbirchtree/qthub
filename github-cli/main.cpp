@@ -5,10 +5,11 @@
 #include <QString>
 
 #include <future>
-#include <functional>
 #include <iostream>
 
 #include <github/github.h>
+
+#include "lambdas.h"
 
 /* Option strings */
 const char* const api_token_str = "api-token";
@@ -22,38 +23,6 @@ const char* const item2_str = "item_sub";
 
 /* Application identifier, change this if you fork this */
 const char* const application_identifier = "HBirchtree-Qthub-CLI-App";
-
-struct ProcessingContext
-{
-    /* Objects */
-    GithubFetch* github_daemon;
-
-    /* Slots */
-    std::function<void(GithubRepo*)> list_repo;
-    std::function<void(GithubRepo*,GithubRelease*)> list_release;
-    std::function<void(GithubRepo*,GithubTag*)> list_tag;
-    std::function<void(GithubRelease*,GithubAsset*)> list_asset;
-
-    std::function<void(GithubUser*)> show_user;
-    std::function<void(GithubRepo*)> show_repo;
-    std::function<void(GithubRepo*,GithubRelease*)> show_release;
-    std::function<void(GithubRepo*,GithubTag*)> show_tag;
-    std::function<void(GithubRepo*,GithubTag*)> show_issue;
-    std::function<void(GithubRelease*,GithubAsset*)> show_asset;
-    std::function<void(GithubRelease*,GithubAsset*)> show_pr;
-
-    std::function<void(GithubUser*)> get_user_repos;
-    std::function<void(GithubRepo*)> get_repo_releases;
-    std::function<void(GithubRepo*)> get_repo_tags;
-    std::function<void(GithubRepo*)> get_repo_prs;
-    std::function<void(GithubRepo*)> get_repo_issues;
-    std::function<void(GithubRepo*,GithubRelease*)> get_release_assets;
-
-    std::function<void(GithubRepo*,GithubRelease*)> delete_release;
-    std::function<void(GithubRepo*,GithubRelease*)> delete_pr;
-    std::function<void(GithubRepo*,GithubRelease*)> delete_issue;
-    std::function<void(GithubRelease*,GithubAsset*)> delete_asset;
-};
 
 static void processInputs(QCommandLineParser& parser,
                           ProcessingContext& c,
@@ -92,13 +61,12 @@ int main(int argc, char *argv[])
                 "|asset"
 //                "|pr"
                 "] [repo]\n"
-                "list asset [repo:release]\n"
+                "list asset [repo:release] [filter]\n"
 
                 "show [user|repository] [name]\n"
-                "show [tag|release] [repo] [name]\n"
-//                "show [asset|pr] [repo] [id]\n"
+                "show [tag|release|pr] [repo] [filter]\n"
+                "show asset [repo:release] [filter]\n"
 //                "show pr [repo] [id]\n"
-//                "show asset [repo:release] [id]\n"
 
                 "delete release [repo] [name]\n"
 //                "delete asset [repo:release] [id]\n"
@@ -116,7 +84,7 @@ int main(int argc, char *argv[])
     parser.addPositionalArgument(
                 category_str,
                 "Category to perform action on "
-                "[user, repository, tag, release, release-file, pr]",
+                "[user|repository|tag|release|asset|pr|issue]",
                 "[category]");
     parser.addPositionalArgument(
                 item_str,
@@ -142,134 +110,10 @@ int main(int argc, char *argv[])
     if(!parser.value(separator_str).isEmpty())
         separator = parser.value(separator_str);
 
-    std::string sep = separator.toStdString();
-
-    /* Listing functions */
-    auto list_repo = [&](GithubRepo* r)
-    {
-        std::cout << r->name().toStdString() << std::endl;
-    };
-    auto list_release = [&](GithubRepo* r, GithubRelease* rl)
-    {
-        std::cout << rl->id() << sep
-                  << r->name().toStdString() << sep
-                  << rl->tagName().toStdString()
-                  << std::endl;
-    };
-    auto list_tag = [&](GithubRepo* r, GithubTag* tag)
-    {
-        std::cout << r->name().toStdString() << sep
-                  << tag->name().toStdString() << sep
-                  << tag->commit().toStdString()
-                  << std::endl;
-    };
-    auto list_asset = [&](GithubRelease* rel, GithubAsset* asset)
-    {
-        std::cout
-                << rel->repository()->name().toStdString() << sep
-                << rel->tagName().toStdString() << sep
-                << rel->name().toStdString() << sep
-                << asset->name().toStdString() << sep
-                << std::endl;
-    };
-
-    /* Show functions */
-    auto show_user = [&](GithubUser* u)
-    {
-        std::cout
-                << u->login().toStdString() << sep
-                << u->name().toStdString() << sep
-                << u->registered().toString().toStdString()
-                << std::endl;
-    };
-    auto show_repo = [&](GithubRepo* r)
-    {
-        std::cout
-                << r->name().toStdString() << sep
-                << r->description().toStdString() << sep
-                << r->language().toStdString() << sep
-                << r->created().toString().toStdString()
-                << std::endl;
-    };
-    auto show_release = [&](GithubRepo*, GithubRelease* r)
-    {
-        std::cout
-                << r->id() << sep
-                << r->name().toStdString() << sep
-                << r->tagName().toStdString()
-                << std::endl;
-    };
-    auto show_tag = [&](GithubRepo*, GithubTag* tag)
-    {
-        std::cout
-                << tag->name().toStdString() << sep
-                << tag->commit().toStdString() << sep
-                << tag->tarballUrl().toString().toStdString()
-                << std::endl;
-    };
-    auto show_asset = [&](GithubRelease* r, GithubAsset* a)
-    {
-        std::cout
-                << r->repository()->name().toStdString() << sep
-                << r->tagName().toStdString() << sep
-                << r->repository()->tag(r->tagName())->commit().toStdString() << sep
-                << a->id() << sep
-                << a->name().toStdString() << sep
-                << a->label().toStdString() << sep
-                << a->downloadUrl().toString().toStdString() << sep
-                << std::endl;
-    };
-
-    /* Deleting resources */
-    auto delete_release = [&](GithubRepo* repo, GithubRelease* rl)
-    {
-//        github_daemon.requestDelete(rl);
-        list_release(repo, rl);
-    };
-
-    /* Deepening functions */
-    auto get_repo_releases = [&](GithubRepo* repo)
-    {
-        github_daemon.fetchAllReleases(repo);
-    };
-    auto get_repo_tags = [&](GithubRepo* repo)
-    {
-        github_daemon.fetchAllTags(repo);
-    };
-    auto get_user_repos = [&](GithubUser* user)
-    {
-        github_daemon.fetchAllRepositories(user);
-    };
-
     /* Function pointers and etc. to pass on to processing */
-    ProcessingContext ctxt = {
-        &github_daemon,
-
-        list_repo,
-        list_release,
-        list_tag,
-        list_asset,
-
-        show_user,
-        show_repo,
-        show_release,
-        show_tag,
-        nullptr,
-        show_asset,
-        nullptr,
-
-        get_user_repos,
-        get_repo_releases,
-        get_repo_tags,
-        nullptr,
-        nullptr,
-        nullptr,
-
-        delete_release,
-        nullptr,
-        nullptr,
-        nullptr,
-    };
+    ProcessingContext ctxt = {};
+    PopulateProcessingContext(&ctxt, github_daemon, separator.toStdString());
+    ctxt.github_daemon = &github_daemon;
 
     auto launch_processing = [&]()
     {
@@ -295,7 +139,7 @@ int main(int argc, char *argv[])
     });
     QObject::connect(&github_daemon, &GithubFetch::reportProgress,
                      [&](QString const& dl, int curr, int tot){
-        qDebug().noquote() << QString("Downloading resource: %1 (%2/%3)")
+        qDebug().noquote() << QString("resource: %1 (%2/%3)")
                               .arg(dl).arg(curr).arg(tot);
     });
 
@@ -331,6 +175,7 @@ void processInputs(QCommandLineParser& parser,
                    QString const& filter)
 {
     static QRegExp filter_rgx(filter);
+    static QRegExp filter_asset = QRegExp(item2);
 
     /* All of these methods are future-dependent
      * Signals and slots allow networking to happen and queueing becomes simple.
@@ -374,6 +219,12 @@ void processInputs(QCommandLineParser& parser,
             c.github_daemon->fetchRepo(item);
         }else if(category == "asset")
         {
+            QStringList args = item.split(":");
+            if(args.size() >= 2)
+                filter_rgx = QRegExp(args[1]);
+            else
+                parser.showHelp(1);
+
             QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
                              [&](GithubRepo* repo)
             {
@@ -386,10 +237,11 @@ void processInputs(QCommandLineParser& parser,
                              [&](GithubRelease* rel, GithubAsset* asset)
             {
                 /* Releases also acquire asset details! */
-                if(asset->name().contains(filter_rgx))
-                    c.list_asset(rel, asset);
+                if(rel->tagName().contains(filter_rgx))
+                    if(asset->name().contains(filter_asset))
+                        c.list_asset(rel, asset);
             });
-            c.github_daemon->fetchRepo(item);
+            c.github_daemon->fetchRepo(args[0]);
         }else
         {
             parser.showHelp(1);
@@ -432,15 +284,22 @@ void processInputs(QCommandLineParser& parser,
             c.github_daemon->fetchUser(item);
         }else if(category == "asset")
         {
+            QStringList args = item.split(":");
+            if(args.size() >= 2)
+                filter_rgx = QRegExp(args[1]);
+            else
+                parser.showHelp(1);
+
             QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
                              c.get_repo_releases);
             QObject::connect(c.github_daemon, &GithubFetch::assetUpdated,
                              [&](GithubRelease* rel, GithubAsset* asset)
             {
-                if(asset->name().contains(filter_rgx))
-                    c.show_asset(rel, asset);
+                if(rel->tagName().contains(filter_rgx))
+                    if(asset->name().contains(filter_asset))
+                        c.show_asset(rel, asset);
             });
-            c.github_daemon->fetchRepo(item);
+            c.github_daemon->fetchRepo(args[0]);
         }else
         {
             parser.showHelp(1);
