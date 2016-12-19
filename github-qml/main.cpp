@@ -3,7 +3,7 @@
 #include <QStringList>
 #include <QString>
 
-#include <github/githubfetch.h>
+#include <github/github.h>
 
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
@@ -11,12 +11,12 @@
 #include <QtQml/QJSValue>
 #include <QtQml/QJSEngine>
 
-const char* const application_identifier = "HBirchtree-Qthub-App";
+static const char* const application_identifier = "HBirchtree-Qthub-App";
 
-const char* github_token = nullptr;
-QQmlApplicationEngine* m_engine;
+static const char* github_token = nullptr;
+static QQmlApplicationEngine* m_engine;
 
-QObject* GenGithubDaemon(QQmlEngine*, QJSEngine*)
+static QObject* GenGithubDaemon(QQmlEngine*, QJSEngine*)
 {
     GithubFetch* obj = new GithubFetch(application_identifier);
 

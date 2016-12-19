@@ -6,7 +6,8 @@
 #include <QDateTime>
 #include <QVector>
 
-#include "githubreleasefile.h"
+class GithubRepo;
+class GithubAsset;
 
 class GithubRelease : public QObject
 {
@@ -15,7 +16,10 @@ class GithubRelease : public QObject
     Q_PROPERTY(quint64 id READ id WRITE setId NOTIFY idChanged)
 
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
+    Q_PROPERTY(QString description READ description WRITE setDescription)
     Q_PROPERTY(QString tagName READ tagName WRITE setTagName NOTIFY tagNameChanged)
+
+    Q_PROPERTY(QString author READ author WRITE setAuthor)
 
     Q_PROPERTY(QDateTime created READ created WRITE setCreated NOTIFY createdChanged)
     Q_PROPERTY(QDateTime published READ published WRITE setPublished NOTIFY publishedChanged)
@@ -27,7 +31,9 @@ class GithubRelease : public QObject
 
     quint64 m_id;
     QString m_name;
+    QString m_description;
     QString m_tagName;
+    QString m_author;
     QDateTime m_created;
     QDateTime m_published;
     bool m_prerelease;
@@ -37,6 +43,8 @@ class GithubRelease : public QObject
 
 public:
     explicit GithubRelease(QObject *parent = 0);
+
+    GithubRepo* repository() const;
 
     QVector<GithubAsset*> const& assets() const
     {
@@ -76,6 +84,16 @@ public:
     bool draft() const
     {
         return m_draft;
+    }
+
+    QString description() const
+    {
+        return m_description;
+    }
+
+    QString author() const
+    {
+        return m_author;
     }
 
 signals:
@@ -147,6 +165,14 @@ public slots:
 
         m_draft = draft;
         emit draftChanged(draft);
+    }
+    void setDescription(QString description)
+    {
+        m_description = description;
+    }
+    void setAuthor(QString author)
+    {
+        m_author = author;
     }
 };
 

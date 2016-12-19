@@ -1,4 +1,9 @@
 #include <github/githubfetch.h>
+#include <github/githubrepo.h>
+#include <github/githubuser.h>
+#include <github/githubtag.h>
+#include <github/githubrelease.h>
+#include <github/githubreleasefile.h>
 
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
@@ -70,7 +75,13 @@ void GithubFetch::addReleases(GithubRepo* r, QJsonArray const& rels)
 
         if(!m["tag_name"].isNull())
             rl->setTagName(m["tag_name"].toString());
+        rl->setName(m["name"].toString());
+        rl->setAuthor(m["author"].toObject()["login"].toString());
+
+        rl->setDescription(m["body"].toString());
         rl->setDraft(m["draft"].toBool());
+        rl->setPrerelease(m["prerelease"].toBool());
+        rl->setPublished(m["published_at"].toVariant().toDateTime());
 
         addAssets(rl, m["assets"].toArray());
 
@@ -98,7 +109,6 @@ void GithubFetch::addTags(GithubRepo *u, const QJsonArray &tags)
 
 void GithubFetch::addAssets(GithubRelease *r, const QJsonArray &assets)
 {
-    GithubRepo* repo = dynamic_cast<GithubRepo*>(r->parent());
     for(int i=0;i<assets.size();i++)
     {
         auto const& m = assets[i].toObject();
@@ -116,7 +126,7 @@ void GithubFetch::addAssets(GithubRelease *r, const QJsonArray &assets)
         at->setUpdated(m["updated_at"].toVariant().toDateTime());
 
         r->addAsset(at);
-        assetUpdated(repo, r, at);
+        assetUpdated(r, at);
     }
 }
 

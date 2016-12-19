@@ -6,8 +6,11 @@
 #include <QNetworkReply>
 #include <QMap>
 
-#include "githubuser.h"
-#include "githubrepo.h"
+class GithubUser;
+class GithubRepo;
+class GithubTag;
+class GithubRelease;
+class GithubAsset;
 
 class QNetworkAccessManager;
 
@@ -95,7 +98,7 @@ signals:
     void repoUpdated(GithubRepo* repo);
     void releaseUpdated(GithubRepo* repo, GithubRelease* release);
     void tagUpdated(GithubRepo* repo, GithubTag* tag);
-    void assetUpdated(GithubRepo* repo, GithubRelease* release, GithubAsset* file);
+    void assetUpdated(GithubRelease* release, GithubAsset* file);
 
 private slots:
     void startNetworkRequest(const QString &url,

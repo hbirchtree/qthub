@@ -6,6 +6,8 @@
 #include <QUrl>
 #include <QDateTime>
 
+class GithubRelease;
+
 class GithubAsset : public QObject
 {
     Q_OBJECT
@@ -37,6 +39,8 @@ class GithubAsset : public QObject
 
 public:
     explicit GithubAsset(QObject* parent = 0);
+
+    GithubRelease* release() const;
 
     quint64 id() const
     {

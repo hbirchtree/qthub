@@ -1,13 +1,13 @@
 #ifndef GITHUBREPO_H
 #define GITHUBREPO_H
 
-#include "githubrelease.h"
-#include "githubtag.h"
-
 #include <QObject>
 #include <QDateTime>
 #include <QVector>
 #include <QPointer>
+
+class GithubRelease;
+class GithubTag;
 
 class GithubRepo : public QObject
 {
@@ -60,13 +60,16 @@ public:
         return m_releases;
     }
 
+    GithubTag* tag(QString const& name) const;
+    GithubRelease *release(quint64 id) const;
+
 public slots:
     void addRelease(GithubRelease* rel);
     void addTag(GithubTag* tag);
 
 signals:
-    void releaseAdded(QPointer<GithubRelease> rel);
-    void tagAdded(QPointer<GithubTag> tag);
+    void releaseAdded(GithubRelease* rel);
+    void tagAdded(GithubTag* tag);
 
 public:
     quint64 id() const

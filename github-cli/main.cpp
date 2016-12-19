@@ -8,7 +8,7 @@
 #include <functional>
 #include <iostream>
 
-#include <github/githubfetch.h>
+#include <github/github.h>
 
 /* Option strings */
 const char* const api_token_str = "api-token";
@@ -32,17 +32,27 @@ struct ProcessingContext
     std::function<void(GithubRepo*)> list_repo;
     std::function<void(GithubRepo*,GithubRelease*)> list_release;
     std::function<void(GithubRepo*,GithubTag*)> list_tag;
+    std::function<void(GithubRelease*,GithubAsset*)> list_asset;
 
     std::function<void(GithubUser*)> show_user;
     std::function<void(GithubRepo*)> show_repo;
     std::function<void(GithubRepo*,GithubRelease*)> show_release;
     std::function<void(GithubRepo*,GithubTag*)> show_tag;
+    std::function<void(GithubRepo*,GithubTag*)> show_issue;
+    std::function<void(GithubRelease*,GithubAsset*)> show_asset;
+    std::function<void(GithubRelease*,GithubAsset*)> show_pr;
 
     std::function<void(GithubUser*)> get_user_repos;
     std::function<void(GithubRepo*)> get_repo_releases;
     std::function<void(GithubRepo*)> get_repo_tags;
+    std::function<void(GithubRepo*)> get_repo_prs;
+    std::function<void(GithubRepo*)> get_repo_issues;
+    std::function<void(GithubRepo*,GithubRelease*)> get_release_assets;
 
     std::function<void(GithubRepo*,GithubRelease*)> delete_release;
+    std::function<void(GithubRepo*,GithubRelease*)> delete_pr;
+    std::function<void(GithubRepo*,GithubRelease*)> delete_issue;
+    std::function<void(GithubRelease*,GithubAsset*)> delete_asset;
 };
 
 static void processInputs(QCommandLineParser& parser,
@@ -77,23 +87,29 @@ int main(int argc, char *argv[])
                 "Action to perform [list, show, delete, push, pull, merge]\n"
                 "Action matrix: \n"
 
-                "list [repository] [username]\n"
-                "list [tag|release|release-file|pr] [repo]\n"
+                "list repository [username]\n"
+                "list [tag|release"
+                "|asset"
+//                "|pr"
+                "] [repo]\n"
+                "list asset [repo:release]\n"
 
+                "show [user|repository] [name]\n"
                 "show [tag|release] [repo] [name]\n"
-                "show pr [repo] [id]\n"
-                "show release-file [repo:release] [id]\n"
+//                "show [asset|pr] [repo] [id]\n"
+//                "show pr [repo] [id]\n"
+//                "show asset [repo:release] [id]\n"
 
                 "delete release [repo] [name]\n"
-                "delete release-file [repo:release] [id]\n"
-                "delete pr [repo] [id]\n"
+//                "delete asset [repo:release] [id]\n"
+//                "delete pr [repo] [id]\n"
 
-                "push release [repo] [name]\n"
-                "push release-file [repo:release] [name]\n"
-                "push pr [repo] [name]\n"
+//                "push release [repo] [name]\n"
+//                "push asset [repo:release] [name]\n"
+//                "push pr [repo] [name]\n"
 
-                "pull [tag|release] [repo] [name]\n"
-                "pull release-file [repo:release] [id]\n"
+//                "pull [tag|release] [repo] [name]\n"
+//                "pull asset [repo:release] [id]\n"
                 ,
 
                 "[action]");
@@ -126,6 +142,8 @@ int main(int argc, char *argv[])
     if(!parser.value(separator_str).isEmpty())
         separator = parser.value(separator_str);
 
+    std::string sep = separator.toStdString();
+
     /* Listing functions */
     auto list_repo = [&](GithubRepo* r)
     {
@@ -133,51 +151,72 @@ int main(int argc, char *argv[])
     };
     auto list_release = [&](GithubRepo* r, GithubRelease* rl)
     {
-        std::cout << rl->id() << " "
-                  << r->name().toStdString() << separator.toStdString()
+        std::cout << rl->id() << sep
+                  << r->name().toStdString() << sep
                   << rl->tagName().toStdString()
                   << std::endl;
     };
     auto list_tag = [&](GithubRepo* r, GithubTag* tag)
     {
-        std::cout << r->name().toStdString() << separator.toStdString()
-                  << tag->name().toStdString() << separator.toStdString()
+        std::cout << r->name().toStdString() << sep
+                  << tag->name().toStdString() << sep
                   << tag->commit().toStdString()
                   << std::endl;
+    };
+    auto list_asset = [&](GithubRelease* rel, GithubAsset* asset)
+    {
+        std::cout
+                << rel->repository()->name().toStdString() << sep
+                << rel->tagName().toStdString() << sep
+                << rel->name().toStdString() << sep
+                << asset->name().toStdString() << sep
+                << std::endl;
     };
 
     /* Show functions */
     auto show_user = [&](GithubUser* u)
     {
         std::cout
-                << u->login().toStdString() << separator.toStdString()
-                << u->name().toStdString() << separator.toStdString()
+                << u->login().toStdString() << sep
+                << u->name().toStdString() << sep
                 << u->registered().toString().toStdString()
                 << std::endl;
     };
     auto show_repo = [&](GithubRepo* r)
     {
         std::cout
-                << r->name().toStdString() << separator.toStdString()
-                << r->description().toStdString() << separator.toStdString()
-                << r->language().toStdString() << separator.toStdString()
+                << r->name().toStdString() << sep
+                << r->description().toStdString() << sep
+                << r->language().toStdString() << sep
                 << r->created().toString().toStdString()
                 << std::endl;
     };
     auto show_release = [&](GithubRepo*, GithubRelease* r)
     {
         std::cout
-                << r->id() << separator.toStdString()
-                << r->name().toStdString() << separator.toStdString()
+                << r->id() << sep
+                << r->name().toStdString() << sep
                 << r->tagName().toStdString()
                 << std::endl;
     };
     auto show_tag = [&](GithubRepo*, GithubTag* tag)
     {
         std::cout
-                << tag->name().toStdString() << separator.toStdString()
-                << tag->commit().toStdString() << separator.toStdString()
+                << tag->name().toStdString() << sep
+                << tag->commit().toStdString() << sep
                 << tag->tarballUrl().toString().toStdString()
+                << std::endl;
+    };
+    auto show_asset = [&](GithubRelease* r, GithubAsset* a)
+    {
+        std::cout
+                << r->repository()->name().toStdString() << sep
+                << r->tagName().toStdString() << sep
+                << r->repository()->tag(r->tagName())->commit().toStdString() << sep
+                << a->id() << sep
+                << a->name().toStdString() << sep
+                << a->label().toStdString() << sep
+                << a->downloadUrl().toString().toStdString() << sep
                 << std::endl;
     };
 
@@ -209,17 +248,27 @@ int main(int argc, char *argv[])
         list_repo,
         list_release,
         list_tag,
+        list_asset,
 
         show_user,
         show_repo,
         show_release,
         show_tag,
+        nullptr,
+        show_asset,
+        nullptr,
 
         get_user_repos,
         get_repo_releases,
         get_repo_tags,
+        nullptr,
+        nullptr,
+        nullptr,
 
-        delete_release
+        delete_release,
+        nullptr,
+        nullptr,
+        nullptr,
     };
 
     auto launch_processing = [&]()
@@ -283,8 +332,15 @@ void processInputs(QCommandLineParser& parser,
 {
     static QRegExp filter_rgx(filter);
 
+    /* All of these methods are future-dependent
+     * Signals and slots allow networking to happen and queueing becomes simple.
+     * There is no queueing. All of this is random, no order is determined.
+     * Thank C++11 for lambdas.
+     */
+
     if(action == "list")
     {
+
         if(category == "repository")
         {
             QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
@@ -299,6 +355,7 @@ void processInputs(QCommandLineParser& parser,
             QObject::connect(c.github_daemon, &GithubFetch::releaseUpdated,
                              [&](GithubRepo* r, GithubRelease* rl)
             {
+                /* Filter releases based on their tags */
                 if(rl->tagName().contains(filter_rgx))
                     c.list_release(r, rl);
             });
@@ -310,8 +367,27 @@ void processInputs(QCommandLineParser& parser,
             QObject::connect(c.github_daemon, &GithubFetch::tagUpdated,
                              [&](GithubRepo* r, GithubTag* tag)
             {
+                /* Filter tags based on filter provided, regex */
                 if(tag->name().contains(filter_rgx))
                     c.list_tag(r, tag);
+            });
+            c.github_daemon->fetchRepo(item);
+        }else if(category == "asset")
+        {
+            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                             [&](GithubRepo* repo)
+            {
+                /* We want tags to get commit IDs */
+                c.github_daemon->fetchAllTags(repo);
+                /* Pass it on to get releases */
+                c.get_repo_releases(repo);
+            });
+            QObject::connect(c.github_daemon, &GithubFetch::assetUpdated,
+                             [&](GithubRelease* rel, GithubAsset* asset)
+            {
+                /* Releases also acquire asset details! */
+                if(asset->name().contains(filter_rgx))
+                    c.list_asset(rel, asset);
             });
             c.github_daemon->fetchRepo(item);
         }else
@@ -354,6 +430,17 @@ void processInputs(QCommandLineParser& parser,
             QObject::connect(c.github_daemon, &GithubFetch::userUpdated,
                              c.show_user);
             c.github_daemon->fetchUser(item);
+        }else if(category == "asset")
+        {
+            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                             c.get_repo_releases);
+            QObject::connect(c.github_daemon, &GithubFetch::assetUpdated,
+                             [&](GithubRelease* rel, GithubAsset* asset)
+            {
+                if(asset->name().contains(filter_rgx))
+                    c.show_asset(rel, asset);
+            });
+            c.github_daemon->fetchRepo(item);
         }else
         {
             parser.showHelp(1);
