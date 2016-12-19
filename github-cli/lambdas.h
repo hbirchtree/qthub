@@ -116,10 +116,13 @@ void PopulateProcessingContext(ProcessingContext* ctxt, GithubFetch& github_daem
     };
 
     /* Deleting resources */
-    auto delete_release = [&](GithubRepo* repo, GithubRelease* rl)
+    auto delete_release = [&](GithubRepo*, GithubRelease* rl)
     {
+        std::cout
+                << rl->id() << sep
+                << rl->tagName().toStdString() << sep
+                << std::endl;
         github_daemon.requestDelete(rl);
-        list_release(repo, rl);
     };
 
     /* Deepening functions */

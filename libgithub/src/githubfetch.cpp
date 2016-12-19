@@ -330,11 +330,18 @@ void GithubFetch::receiveUserData()
         /* Get the data */
         QByteArray rep_data = rep->readAll();
 
+        if(rep_data.size() <= 0)
+        {
+            transferCompleted();
+            return;
+        }
+
         QJsonParseError err;
         QJsonDocument doc = QJsonDocument::fromJson(rep_data, &err);
         if(err.error != QJsonParseError::NoError)
         {
             qDebug() << err.errorString();
+            transferCompleted();
             return;
         }
 

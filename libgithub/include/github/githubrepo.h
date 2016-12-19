@@ -64,8 +64,8 @@ class GithubRepo : public QObject
     union {
         struct
         {
-            bool m_fork;
-            bool m_private;
+            bool m_fork:1;
+            bool m_private:1;
         };
         quint8 m_bitfield_store;
     };
