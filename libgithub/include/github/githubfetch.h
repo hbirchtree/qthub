@@ -11,6 +11,7 @@ class GithubRepo;
 class GithubTag;
 class GithubRelease;
 class GithubAsset;
+class GithubBranch;
 
 class QNetworkAccessManager;
 
@@ -71,6 +72,7 @@ public:
     }
 
 private:
+    void addConnections(QNetworkReply* rep);
     void addToken(QNetworkRequest& req);
 
     void updateUser(GithubUser* u, QJsonObject const& o);
@@ -106,6 +108,9 @@ signals:
 
     void readmeUpdated(GithubRepo* repo);
 
+    void downloadFailed(QUrl const& url, QString const& filename);
+    void downloadSuccess(QUrl const& url, QString const& filename);
+
 private slots:
     void startNetworkRequest(const QString &url,
                              const QString &id,
@@ -116,11 +121,13 @@ private slots:
     void pushResource(QString const& rsrc, const QString &id, ReplyType receive,
                       QByteArray const& data);
     void pullResource(QString const& rsrc, const QString &id, ReplyType receive,
-                      const QString &target);
+                      const QString &target, bool asset = false);
 
     void receiveUserData();
 
     void registerProgress(qint64 rec, qint64 tot);
+
+    void downloadFile(QUrl const& url, QString const& file);
 
 public slots:
     void authenticate(QString const& token);
@@ -140,6 +147,15 @@ public slots:
     void requestDelete(GithubRelease* release);
     void requestDelete(GithubTag* tag);
     void requestDelete(GithubAsset* tag);
+
+    void requestDownload(GithubAsset* asset);
+    void requestDownload(GithubRelease* rel);
+    void requestDownload(GithubTag* tag);
+    void requestDownload(GithubRepo* repo);
+    void requestDownload(GithubRepo* repo, GithubBranch*);
+    void requestDownload(GithubRepo* repo, QString const& ref);
+
+    void requestUpload(GithubAsset* asset);
 
     void killAll();
 };

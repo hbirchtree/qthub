@@ -143,6 +143,16 @@ int main(int argc, char *argv[])
         qDebug().noquote() << QString("resource: %1 (%2/%3)")
                               .arg(dl).arg(curr).arg(tot);
     });
+    QObject::connect(&github_daemon, &GithubFetch::downloadSuccess,
+                     [&](QUrl const& url, QString const& file)
+    {
+        qDebug().noquote() << "Success:" << url.toString() << file;
+    });
+    QObject::connect(&github_daemon, &GithubFetch::downloadFailed,
+                     [&](QUrl const& url, QString const& file)
+    {
+        qDebug().noquote() << "Failure:" << url.toString() << file;
+    });
 
     /* Exit condition */
     QObject::connect(&github_daemon, &GithubFetch::transferCompleted,
@@ -303,9 +313,7 @@ void processInputs(QCommandLineParser& parser,
             qDebug("Implementation needed");
             QCoreApplication::exit();
         }else
-        {
             parser.showHelp(1);
-        }
     }else if(action == "delete")
     {
         if(item2.isEmpty())
@@ -355,11 +363,17 @@ void processInputs(QCommandLineParser& parser,
             qDebug("Implementation needed");
             QCoreApplication::exit();
         }else
-        {
             parser.showHelp(1);
-        }
     }else if(action == "push")
     {
+        if(item2.isEmpty())
+        {
+            qDebug() << "Invalid filter, will not proceed";
+            QCoreApplication::exit(1);
+        }
+
+        filter_rgx = QRegExp(item2);
+
         if(category == "release")
         {
             qDebug("Implementation needed");
@@ -373,23 +387,55 @@ void processInputs(QCommandLineParser& parser,
             qDebug("Implementation needed");
             QCoreApplication::exit();
         }else
-            QCoreApplication::exit();
+            parser.showHelp(1);
     }else if(action == "pull")
     {
         if(category == "asset")
         {
-            qDebug("Implementation needed");
-            QCoreApplication::exit();
+            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                             c.get_repo_releases);
+            QObject::connect(c.github_daemon, &GithubFetch::assetUpdated,
+                             [&](GithubRelease* rel, GithubAsset* asset)
+            {
+                if(QString("%1").arg(asset->id()) == filter_asset.pattern()
+                        || asset->name().contains(filter_asset))
+                {
+                    c.pull_asset(rel, asset);
+                }
+            });
+            c.github_daemon->fetchRepo(item);
         }else if(category == "release")
         {
-            qDebug("Implementation needed");
-            QCoreApplication::exit();
+            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                             c.get_repo_releases);
+            QObject::connect(c.github_daemon, &GithubFetch::releaseUpdated,
+                             [&](GithubRepo* repo, GithubRelease* rel)
+            {
+                if(rel->tagName().contains(filter_asset))
+                    c.pull_release(repo, rel);
+            });
+            c.github_daemon->fetchRepo(item);
         }else if(category == "tag")
         {
-            qDebug("Implementation needed");
-            QCoreApplication::exit();
+            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                             c.get_repo_tags);
+            QObject::connect(c.github_daemon, &GithubFetch::tagUpdated,
+                             [&](GithubRepo* repo, GithubTag* rel)
+            {
+                if(rel->name().contains(filter_asset))
+                    c.pull_tag(repo, rel);
+            });
+            c.github_daemon->fetchRepo(item);
+        }else if(category == "repository")
+        {
+            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                             [&](GithubRepo* repo)
+            {
+                c.pull_repo(repo);
+            });
+            c.github_daemon->fetchRepo(item);
         }else
-            QCoreApplication::exit(1);
+            parser.showHelp(1);
     }else{
         qDebug() << "Invalid action:" << action;
         parser.showHelp(1);

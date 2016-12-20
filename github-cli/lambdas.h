@@ -35,6 +35,18 @@ struct ProcessingContext
     std::function<void(GithubRepo*,GithubRelease*)> delete_pr;
     std::function<void(GithubRepo*,GithubRelease*)> delete_issue;
     std::function<void(GithubRelease*,GithubAsset*)> delete_asset;
+
+    std::function<void(GithubRepo*)> pull_repo;
+    std::function<void(GithubRepo*,QString const&)> pull_branch;
+    std::function<void(GithubRepo*,GithubRelease*)> pull_release;
+    std::function<void(GithubRepo*,GithubTag*)> pull_tag;
+    std::function<void(GithubRelease*,GithubAsset*)> pull_asset;
+
+    std::function<void(GithubRepo*,GithubRelease*)> push_release;
+    std::function<void(GithubRepo*,GithubTag*)> push_tag;
+    std::function<void(GithubRepo*,GithubRelease*)> push_pr;
+    std::function<void(GithubRepo*,GithubRelease*)> push_issue;
+    std::function<void(GithubRelease*,GithubAsset*)> push_asset;
 };
 
 void PopulateProcessingContext(ProcessingContext* ctxt, GithubFetch& github_daemon, std::string sep)
@@ -155,6 +167,50 @@ void PopulateProcessingContext(ProcessingContext* ctxt, GithubFetch& github_daem
         github_daemon.fetchAllRepositories(user);
     };
 
+    /* Pull functions */
+    auto pull_asset = [&](GithubRelease*, GithubAsset* asset)
+    {
+        std::cout
+                << asset->id() << sep
+                << asset->name().toStdString() << sep
+                << std::endl;
+        github_daemon.requestDownload(asset);
+    };
+    auto pull_branch = [&](GithubRepo* repo, QString const& ref)
+    {
+        std::cout
+                << ref.toStdString()
+                << std::endl;
+        github_daemon.requestDownload(repo,
+                                      QString("heads/%1")
+                                      .arg(ref));
+    };
+    auto pull_tag = [&](GithubRepo*, GithubTag* tag)
+    {
+        std::cout
+                << tag->name().toStdString() << sep
+                << tag->commit().toStdString()
+                << std::endl;
+        github_daemon.requestDownload(tag);
+    };
+    auto pull_release = [&](GithubRepo*, GithubRelease* rel)
+    {
+        std::cout
+                << rel->tagName().toStdString() << sep
+                << rel->branch().toStdString() << sep
+                << rel->id()
+                << std::endl;
+        github_daemon.requestDownload(rel);
+    };
+    auto pull_repo = [&](GithubRepo* repo)
+    {
+        std::cout
+                << repo->name().toStdString() << sep
+                << repo->branch().toStdString()
+                << std::endl;
+        github_daemon.requestDownload(repo);
+    };
+
     ctxt->list_repo = list_repo;
     ctxt->list_release = list_release;
     ctxt->list_tag = list_tag;
@@ -173,6 +229,12 @@ void PopulateProcessingContext(ProcessingContext* ctxt, GithubFetch& github_daem
     ctxt->delete_release = delete_release;
     ctxt->delete_tag = delete_tag;
     ctxt->delete_asset = delete_asset;
+
+    ctxt->pull_repo = pull_repo;
+    ctxt->pull_branch = pull_branch;
+    ctxt->pull_asset = pull_asset;
+    ctxt->pull_release = pull_release;
+    ctxt->pull_tag = pull_tag;
 }
 
 #endif
