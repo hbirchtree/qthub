@@ -34,3 +34,9 @@ void GithubRepo::addTag(GithubTag *tag)
     m_tags.push_back(tag);
     tagAdded(tag);
 }
+
+void GithubRepo::addBranch(GithubBranch *branch)
+{
+    m_branches.push_back(branch);
+    branchAdded(branch);
+}

@@ -61,24 +61,26 @@ int main(int argc, char *argv[])
 //                "|pr"
                 "] [repo]\n"
                 "list asset [repo:release] [filter]\n"
+                "list branch [repo] [filter]\n"
 
                 "show [user|repository] [name]\n"
-                "show [tag|release"
+                "show [tag|release|branch"
 //                "|pr"
                 "] [repo] [filter]\n"
                 "show asset [repo] [filter]\n"
 //                "show pr [repo] [id]\n"
 
                 "delete [release|tag] [repo] [name]\n"
-//                "delete asset [repo] [id]\n"
+                "delete asset [repo] [id]\n"
 //                "delete pr [repo] [id]\n"
 
-//                "push release [repo] [name]\n"
-//                "push asset [repo] [name]\n"
+                "push release [repo] [name]\n"
+                "push asset [repo] [name]\n"
 //                "push pr [repo] [name]\n"
 
-//                "pull [tag|release] [repo] [name]\n"
-//                "pull asset [repo] [id]\n"
+                "pull repository [repo]\n"
+                "pull [tag|release|branch] [repo] [name]\n"
+                "pull asset [repo] [id]\n"
                 ,
 
                 "[action]");
@@ -203,6 +205,17 @@ void processInputs(QCommandLineParser& parser,
             QObject::connect(c.github_daemon, &GithubFetch::userUpdated,
                              c.get_user_repos);
             c.github_daemon->fetchUser(item);
+        }else if(category == "branch")
+        {
+            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                             c.get_repo_branches);
+            QObject::connect(c.github_daemon, &GithubFetch::branchUpdated,
+                             [&](GithubRepo* r, GithubBranch* branch)
+            {
+                if(branch->name().contains(filter_rgx))
+                    c.list_branch(r, branch);
+            });
+            c.github_daemon->fetchRepo(item);
         }else if(category == "release")
         {
             QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
@@ -262,12 +275,21 @@ void processInputs(QCommandLineParser& parser,
         }
     }else if(action == "show")
     {
-        filter_rgx = QRegExp(item2);
-
         if(category == "repository")
         {
             QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
                              c.show_repo);
+            c.github_daemon->fetchRepo(item);
+        }else if(category == "branch")
+        {
+            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                             c.get_repo_branches);
+            QObject::connect(c.github_daemon, &GithubFetch::branchUpdated,
+                             [&](GithubRepo* r, GithubBranch* branch)
+            {
+                if(branch->name().contains(filter_asset))
+                    c.show_branch(r, branch);
+            });
             c.github_daemon->fetchRepo(item);
         }else if(category == "release")
         {
@@ -276,7 +298,7 @@ void processInputs(QCommandLineParser& parser,
             QObject::connect(c.github_daemon, &GithubFetch::releaseUpdated,
                              [&](GithubRepo* r, GithubRelease* rel)
             {
-                if(rel->tagName().contains(filter_rgx))
+                if(rel->tagName().contains(filter_asset))
                     c.show_release(r, rel);
             });
             c.github_daemon->fetchRepo(item);
@@ -287,7 +309,7 @@ void processInputs(QCommandLineParser& parser,
             QObject::connect(c.github_daemon, &GithubFetch::tagUpdated,
                              [&](GithubRepo* r, GithubTag* tag)
             {
-                if(tag->name().contains(filter_rgx))
+                if(tag->name().contains(filter_asset))
                     c.show_tag(r, tag);
             });
             c.github_daemon->fetchRepo(item);
@@ -413,6 +435,17 @@ void processInputs(QCommandLineParser& parser,
             {
                 if(rel->tagName().contains(filter_asset))
                     c.pull_release(repo, rel);
+            });
+            c.github_daemon->fetchRepo(item);
+        }else if(category == "branch")
+        {
+            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                             c.get_repo_branches);
+            QObject::connect(c.github_daemon, &GithubFetch::branchUpdated,
+                             [&](GithubRepo* repo, GithubBranch* branch)
+            {
+                if(branch->name().contains(filter_asset))
+                    c.pull_branch(repo, branch);
             });
             c.github_daemon->fetchRepo(item);
         }else if(category == "tag")

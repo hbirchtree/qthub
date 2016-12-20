@@ -8,6 +8,7 @@
 
 class GithubRelease;
 class GithubTag;
+class GithubBranch;
 
 class GithubRepo : public QObject
 {
@@ -62,6 +63,7 @@ class GithubRepo : public QObject
 
     QVector<GithubRelease*> m_releases;
     QVector<GithubTag*> m_tags;
+    QVector<GithubBranch*> m_branches;
 
     union {
         struct
@@ -91,10 +93,12 @@ public:
 public slots:
     void addRelease(GithubRelease* rel);
     void addTag(GithubTag* tag);
+    void addBranch(GithubBranch* branch);
 
 signals:
     void releaseAdded(GithubRelease* rel);
     void tagAdded(GithubTag* tag);
+    void branchAdded(GithubBranch* branch);
 
 public:
     quint64 id() const

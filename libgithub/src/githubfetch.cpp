@@ -1,9 +1,4 @@
-#include <github/githubfetch.h>
-#include <github/githubrepo.h>
-#include <github/githubuser.h>
-#include <github/githubtag.h>
-#include <github/githubrelease.h>
-#include <github/githubreleasefile.h>
+#include <github/github.h>
 
 #include <QtDebug>
 
@@ -120,6 +115,21 @@ void GithubFetch::addTags(GithubRepo *u, const QJsonArray &tags)
 
         u->addTag(tg);
         tagUpdated(u, tg);
+    }
+}
+
+void GithubFetch::addBranches(GithubRepo *u, const QJsonArray &branches)
+{
+    for(int i=0;i<branches.size();i++)
+    {
+        auto const& m = branches[i].toObject();
+        GithubBranch* b = new GithubBranch(u);
+
+        b->setName(m["name"].toString());
+        b->setCommit(m["commit"].toObject()["sha"].toString());
+
+        u->addBranch(b);
+        branchUpdated(u, b);
     }
 }
 
@@ -304,6 +314,14 @@ void GithubFetch::fetchAllTags(GithubRepo *repo)
                         GitAllTags);
 }
 
+void GithubFetch::fetchAllBranches(GithubRepo *repo)
+{
+    startNetworkRequest(QString("/repos/%1/branches")
+                        .arg(repo->name()),
+                        repo->name(),
+                        GitAllBranches);
+}
+
 void GithubFetch::fetchRelease(GithubRepo *repo, quint64 relId)
 {
     startNetworkRequest(
@@ -415,9 +433,9 @@ void GithubFetch::requestDownload(GithubRepo *repo)
     requestDownload(repo, QString("heads/%1").arg(repo->branch()));
 }
 
-void GithubFetch::requestDownload(GithubRepo *repo, GithubBranch *)
+void GithubFetch::requestDownload(GithubRepo *repo, GithubBranch *branch)
 {
-    requestDownload(repo, "heads/master");
+    requestDownload(repo, QString("heads/%1").arg(branch->name()));
 }
 
 void GithubFetch::requestDownload(GithubRepo *repo, const QString &ref)
@@ -438,7 +456,7 @@ void GithubFetch::requestDownload(GithubRepo *repo, const QString &ref)
 
 void GithubFetch::requestUpload(GithubAsset *asset)
 {
-
+    Q_UNUSED(asset);
 }
 
 void GithubFetch::killAll()
@@ -567,6 +585,13 @@ void GithubFetch::receiveUserData()
             GithubRepo* r = m_repos.value(o->property("id").toString());
             if(r)
                 addReleases(r, doc.array());
+            break;
+        }
+        case GitAllBranches:
+        {
+            GithubRepo* r = m_repos.value(o->property("id").toString());
+            if(r)
+                addBranches(r, doc.array());
             break;
         }
         case GitDownload:

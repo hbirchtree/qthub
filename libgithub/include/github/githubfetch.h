@@ -34,6 +34,7 @@ class GithubFetch : public QObject
         GitAllReleases,
         GitAllTags,
         GitAllAssets,
+        GitAllBranches,
 
         GitReleaseDelete,
         GitTagDelete,
@@ -81,6 +82,7 @@ private:
     void addRepositories(GithubUser* u, QJsonArray const& repos);
     void addReleases(GithubRepo* u, QJsonArray const& rels);
     void addTags(GithubRepo* u, QJsonArray const& tags);
+    void addBranches(GithubRepo* u, QJsonArray const& branches);
 
     void addAssets(GithubRelease* r, QJsonArray const& assets);
 
@@ -102,6 +104,7 @@ signals:
     void selfUpdated(GithubUser* self);
     void userUpdated(GithubUser* user);
     void repoUpdated(GithubRepo* repo);
+    void branchUpdated(GithubRepo* repo, GithubBranch* branch);
     void releaseUpdated(GithubRepo* repo, GithubRelease* release);
     void tagUpdated(GithubRepo* repo, GithubTag* tag);
     void assetUpdated(GithubRelease* release, GithubAsset* file);
@@ -141,6 +144,7 @@ public slots:
     void fetchAllRepositories(GithubUser* user);
     void fetchAllReleases(GithubRepo* repo);
     void fetchAllTags(GithubRepo* repo);
+    void fetchAllBranches(GithubRepo* repo);
 
     void fetchSelf();
 
@@ -152,7 +156,7 @@ public slots:
     void requestDownload(GithubRelease* rel);
     void requestDownload(GithubTag* tag);
     void requestDownload(GithubRepo* repo);
-    void requestDownload(GithubRepo* repo, GithubBranch*);
+    void requestDownload(GithubRepo* repo, GithubBranch*branch);
     void requestDownload(GithubRepo* repo, QString const& ref);
 
     void requestUpload(GithubAsset* asset);

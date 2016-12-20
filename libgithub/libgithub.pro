@@ -13,7 +13,8 @@ SOURCES += \
     src/githubrepo.cpp \
     src/githubuser.cpp \
     src/githubtag.cpp \
-    src/githubreleasefile.cpp
+    src/githubreleasefile.cpp \
+    src/githubbranch.cpp
 
 HEADERS += \
     include/github/githubfetch.h \
@@ -21,7 +22,8 @@ HEADERS += \
     include/github/githubrepo.h \
     include/github/githubuser.h \
     include/github/githubtag.h \
-    include/github/githubreleasefile.h
+    include/github/githubreleasefile.h \
+    include/github/githubbranch.h
 
 INCLUDEPATH += include
 

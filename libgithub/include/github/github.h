@@ -4,3 +4,4 @@
 #include "githubtag.h"
 #include "githubrelease.h"
 #include "githubreleasefile.h"
+#include "githubbranch.h"
