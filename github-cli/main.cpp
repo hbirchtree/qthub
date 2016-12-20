@@ -3,6 +3,7 @@
 #include <QCommandLineOption>
 #include <QStringList>
 #include <QString>
+#include <QFile>
 
 #include <future>
 #include <iostream>
@@ -388,22 +389,39 @@ void processInputs(QCommandLineParser& parser,
             parser.showHelp(1);
     }else if(action == "push")
     {
-        if(item2.isEmpty())
-        {
-            qDebug() << "Invalid filter, will not proceed";
-            QCoreApplication::exit(1);
-        }
-
-        filter_rgx = QRegExp(item2);
-
         if(category == "release")
         {
             qDebug("Implementation needed");
             QCoreApplication::exit();
         }else if(category == "asset")
         {
-            qDebug("Implementation needed");
-            QCoreApplication::exit();
+            QStringList args = item.split(":");
+            if(args.size() >= 2)
+                filter_rgx = QRegExp(args[1]);
+            else
+                parser.showHelp(1);
+
+            QFile file(item2);
+            if(!file.open(QFile::ReadOnly))
+            {
+                qWarning().noquote() << "Failed to open file:" << file.fileName() << ":" << file.errorString();
+                QCoreApplication::exit(1);
+            }
+
+            static QString ftype = "application/octet-stream";
+            static QByteArray data = file.readAll();
+
+            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                             c.get_repo_releases);
+            QObject::connect(c.github_daemon, &GithubFetch::releaseUpdated,
+                             [&](GithubRepo*, GithubRelease* rel)
+            {
+                if(rel->tagName().contains(filter_rgx))
+                {
+                    c.push_asset(rel, filter_asset.pattern(), "", ftype, data);
+                }
+            });
+            c.github_daemon->fetchRepo(args[0]);
         }else if(category == "pr")
         {
             qDebug("Implementation needed");

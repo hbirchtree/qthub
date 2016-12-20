@@ -49,7 +49,9 @@ struct ProcessingContext
     std::function<void(GithubRepo*,GithubTag*)> push_tag;
     std::function<void(GithubRepo*,GithubRelease*)> push_pr;
     std::function<void(GithubRepo*,GithubRelease*)> push_issue;
-    std::function<void(GithubRelease*,GithubAsset*)> push_asset;
+    std::function<void(GithubRelease* rel, QString const& fname, QString const& label,
+                       QString const& type,
+                       QByteArray const& data)> push_asset;
 };
 
 void PopulateProcessingContext(ProcessingContext* ctxt, GithubFetch& github_daemon, std::string sep)
@@ -232,6 +234,12 @@ void PopulateProcessingContext(ProcessingContext* ctxt, GithubFetch& github_daem
     };
 
     /* Push functions */
+    auto push_asset = [&](GithubRelease* rel, QString const& fname,
+            QString const& label, QString const& type,
+            QByteArray const& data)
+    {
+        github_daemon.requestUploadAsset(rel, fname, label, type, data);
+    };
 
     ctxt->list_repo = list_repo;
     ctxt->list_release = list_release;
@@ -260,6 +268,8 @@ void PopulateProcessingContext(ProcessingContext* ctxt, GithubFetch& github_daem
     ctxt->pull_asset = pull_asset;
     ctxt->pull_release = pull_release;
     ctxt->pull_tag = pull_tag;
+
+    ctxt->push_asset = push_asset;
 }
 
 #endif

@@ -121,7 +121,8 @@ private slots:
                              int page = 1);
 
     void deleteResource(const QString &rsrc, const QString &id, ReplyType receive);
-    void pushResource(QString const& rsrc, const QString &id, ReplyType receive,
+    void pushResource(const QString &apipoint, QString const& rsrc,
+                      const QString &id, ReplyType receive, const QString &type,
                       QByteArray const& data);
     void pullResource(QString const& rsrc, const QString &id, ReplyType receive,
                       const QString &target, bool asset = false);
@@ -159,7 +160,11 @@ public slots:
     void requestDownload(GithubRepo* repo, GithubBranch*branch);
     void requestDownload(GithubRepo* repo, QString const& ref);
 
-    void requestUpload(GithubAsset* asset);
+    void requestUploadAsset(GithubRelease *rel,
+                            QString const& fname,
+                            QString const& label,
+                            QString const& type,
+                            QByteArray const& data);
 
     void killAll();
 };

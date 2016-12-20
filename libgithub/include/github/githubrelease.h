@@ -25,6 +25,8 @@ class GithubRelease : public QObject
     Q_PROPERTY(QDateTime created READ created WRITE setCreated NOTIFY createdChanged)
     Q_PROPERTY(QDateTime published READ published WRITE setPublished NOTIFY publishedChanged)
 
+    Q_PROPERTY(QString uploadUrl READ uploadUrl WRITE setUploadUrl)
+
     Q_PROPERTY(bool prerelease READ prerelease WRITE setPrerelease NOTIFY prereleaseChanged)
     Q_PROPERTY(bool draft READ draft WRITE setDraft NOTIFY draftChanged)
 
@@ -38,6 +40,7 @@ class GithubRelease : public QObject
     QString m_author;
     QDateTime m_created;
     QDateTime m_published;
+    QString m_uploadUrl;
     bool m_prerelease;
     bool m_draft;
 
@@ -101,6 +104,11 @@ public:
     QString branch() const
     {
         return m_branch;
+    }
+
+    QString uploadUrl() const
+    {
+        return m_uploadUrl;
     }
 
 signals:
@@ -184,6 +192,10 @@ public slots:
     void setBranch(QString branch)
     {
         m_branch = branch;
+    }
+    void setUploadUrl(QString uploadUrl)
+    {
+        m_uploadUrl = uploadUrl;
     }
 };
 

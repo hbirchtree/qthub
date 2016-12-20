@@ -94,6 +94,8 @@ void GithubFetch::addReleases(GithubRepo* r, QJsonArray const& rels)
         rl->setPublished(m["published_at"].toVariant().toDateTime());
         rl->setCreated(m["created_at"].toVariant().toDateTime());
 
+        rl->setUploadUrl(m["upload_url"].toString().split("{")[0]);
+
         addAssets(rl, m["assets"].toArray());
 
         r->addRelease(rl);
@@ -238,12 +240,15 @@ void GithubFetch::deleteResource(const QString &rsrc, const QString &id, GithubF
     addConnections(rep);
 }
 
-void GithubFetch::pushResource(const QString &rsrc, const QString &id,
+void GithubFetch::pushResource(QString const& apipoint,
+                               const QString &rsrc, const QString &id,
                                GithubFetch::ReplyType receive,
+                               QString const& type,
                                QByteArray const& data)
 {
     QNetworkRequest req;
-    req.setUrl(m_apipoint + rsrc);
+    req.setUrl(apipoint + rsrc);
+    req.setHeader(QNetworkRequest::ContentTypeHeader, type);
     addToken(req);
 
     QNetworkReply* rep = m_netman->post(req, data);
@@ -454,9 +459,19 @@ void GithubFetch::requestDownload(GithubRepo *repo, const QString &ref)
                  .arg(repo_name).arg(ref_name));
 }
 
-void GithubFetch::requestUpload(GithubAsset *asset)
+void GithubFetch::requestUploadAsset(GithubRelease* rel,
+                                     const QString &fname,
+                                     const QString &label,
+                                     const QString &type,
+                                     const QByteArray &data)
 {
-    Q_UNUSED(asset);
+    pushResource(rel->uploadUrl(),
+                 QString("?name=%3")
+                 .arg(fname),
+                 QString("%1:%2/assets:%3")
+                 .arg(rel->repository()->name())
+                 .arg(rel->id()).arg(fname),
+                 GitUpload, type, data);
 }
 
 void GithubFetch::killAll()
