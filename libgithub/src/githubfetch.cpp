@@ -207,6 +207,60 @@ void GithubFetch::startNetworkRequest(const QString &url,
     m_activeTransfers++;
 }
 
+void GithubFetch::deleteResource(const QString &rsrc, const QString &id, GithubFetch::ReplyType receive)
+{
+    QNetworkRequest req;
+    req.setUrl(m_apipoint + rsrc);
+    addToken(req);
+
+    QNetworkReply* rep = m_netman->deleteResource(req);
+    qDebug() << "Delete:" << req.url().toString();
+    rep->setProperty("type", receive);
+    rep->setProperty("id", id);
+    connect(rep, &QNetworkReply::finished,
+            this, &GithubFetch::receiveUserData);
+    connect(rep, &QNetworkReply::downloadProgress,
+            this, &GithubFetch::registerProgress);
+    m_activeTransfers++;
+}
+
+void GithubFetch::pushResource(const QString &rsrc, const QString &id,
+                               GithubFetch::ReplyType receive,
+                               QByteArray const& data)
+{
+    QNetworkRequest req;
+    req.setUrl(m_apipoint + rsrc);
+    addToken(req);
+
+    QNetworkReply* rep = m_netman->post(req, data);
+    rep->setProperty("type", receive);
+    rep->setProperty("id", id);
+    connect(rep, &QNetworkReply::finished,
+            this, &GithubFetch::receiveUserData);
+    connect(rep, &QNetworkReply::downloadProgress,
+            this, &GithubFetch::registerProgress);
+    m_activeTransfers++;
+}
+
+void GithubFetch::pullResource(const QString &rsrc, const QString &id,
+                               GithubFetch::ReplyType receive,
+                               const QString &target)
+{
+    QNetworkRequest req;
+    req.setUrl(m_apipoint + rsrc);
+    addToken(req);
+
+    QNetworkReply* rep = m_netman->get(req);
+    rep->setProperty("type", receive);
+    rep->setProperty("id", id);
+    rep->setProperty("target", target);
+    connect(rep, &QNetworkReply::finished,
+            this, &GithubFetch::receiveUserData);
+    connect(rep, &QNetworkReply::downloadProgress,
+            this, &GithubFetch::registerProgress);
+    m_activeTransfers++;
+}
+
 void GithubFetch::fetchUser(const QString &username)
 {
     startNetworkRequest(QString("/users/%2")
@@ -259,6 +313,15 @@ void GithubFetch::fetchRelease(GithubRepo *repo, quint64 relId)
                 GitRelease);
 }
 
+void GithubFetch::fetchReadme(GithubRepo *repo)
+{
+    startNetworkRequest(
+                QString("/repos/%1/readme")
+                .arg(repo->name()),
+                repo->name(),
+                GitReadme);
+}
+
 void GithubFetch::fetchSelf()
 {
     if(m_token.size() >= 1)
@@ -272,21 +335,44 @@ void GithubFetch::fetchSelf()
 
 void GithubFetch::requestDelete(GithubRelease *release)
 {
-    GithubRepo* repo = dynamic_cast<GithubRepo*>(release->parent());
+    GithubRepo* repo = release->repository();
     if(!repo)
         return;
 
-    QNetworkRequest req;
-    req.setUrl(m_apipoint + QString("/repos/%1/releases/%2")
-               .arg(repo->name()).arg(release->id()));
-    addToken(req);
+     deleteResource(QString("/repos/%1/releases/%2")
+                    .arg(repo->name()).arg(release->id()),
+                    QString("%1:%2")
+                    .arg(repo->name()).arg(release->id()),
+                    GitReleaseDelete);
+}
 
-    QNetworkReply* rep = m_netman->deleteResource(req);
-    qDebug() << "Delete:" << req.url();
-    rep->setProperty("type", GitReleaseDelete);
-    connect(rep, &QNetworkReply::finished,
-            this, &GithubFetch::receiveUserData);
-    m_activeTransfers++;
+void GithubFetch::requestDelete(GithubTag *tag)
+{
+    GithubRepo* repo = tag->repository();
+    if(!repo)
+        return;
+
+    deleteResource(QString("/repos/%1/git/refs/tags/%2")
+                   .arg(repo->name()).arg(tag->name()),
+                   QString("%1:%2")
+                   .arg(repo->name()).arg(tag->name()),
+                   GitTagDelete);
+}
+
+void GithubFetch::requestDelete(GithubAsset *asset)
+{
+    GithubRelease* release = asset->release();
+    if(!release)
+        return;
+    GithubRepo* repo = release->repository();
+    if(!repo)
+        return;
+
+    deleteResource(QString("/repos/%1/releases/assets/%2")
+                   .arg(repo->name()).arg(asset->id()),
+                   QString("%1:%2")
+                   .arg(repo->name()).arg(asset->id()),
+                   GitAssetDelete);
 }
 
 void GithubFetch::killAll()
@@ -371,14 +457,6 @@ void GithubFetch::receiveUserData()
 
             break;
         }
-        case GitAllRepos:
-        {
-            GithubUser* u = m_users.value(o->property("id").toString());
-
-            if(u)
-                addRepositories(u, doc.array());
-            break;
-        }
         case GitRepo:
         {
             GithubRepo* r = m_repos.value(o->property("id").toString());
@@ -392,6 +470,24 @@ void GithubFetch::receiveUserData()
             updateRepo(r, doc.object());
 
             repoUpdated(r);
+            break;
+        }
+        case GitRelease:
+        {
+            GithubRepo* r = m_repos.value(o->property("id").toString());
+
+            QJsonArray arr = {doc.object()};
+            if(r)
+                addReleases(r, arr);
+
+            break;
+        }
+        case GitAllRepos:
+        {
+            GithubUser* u = m_users.value(o->property("id").toString());
+
+            if(u)
+                addRepositories(u, doc.array());
             break;
         }
         case GitAllTags:
@@ -411,22 +507,6 @@ void GithubFetch::receiveUserData()
             if(r)
                 addReleases(r, doc.array());
 
-            break;
-        }
-        case GitRelease:
-        {
-            GithubRepo* r = m_repos.value(o->property("id").toString());
-
-            QJsonArray arr = {doc.object()};
-            if(r)
-                addReleases(r, arr);
-
-            break;
-        }
-        case GitReleaseDelete:
-        {
-            qDebug() << "Deleted tag from " << rep->url() <<
-                        " with status " << rep->rawHeader("Status");
             break;
         }
         }

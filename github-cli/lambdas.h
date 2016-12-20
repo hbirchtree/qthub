@@ -31,6 +31,7 @@ struct ProcessingContext
     std::function<void(GithubRepo*)> get_repo_issues;
 
     std::function<void(GithubRepo*,GithubRelease*)> delete_release;
+    std::function<void(GithubRepo*,GithubTag*)> delete_tag;
     std::function<void(GithubRepo*,GithubRelease*)> delete_pr;
     std::function<void(GithubRepo*,GithubRelease*)> delete_issue;
     std::function<void(GithubRelease*,GithubAsset*)> delete_asset;
@@ -62,6 +63,7 @@ void PopulateProcessingContext(ProcessingContext* ctxt, GithubFetch& github_daem
         std::cout
                 << rel->repository()->name().toStdString() << sep
                 << rel->tagName().toStdString() << sep
+                << asset->id() << sep
                 << rel->name().toStdString() << sep
                 << asset->name().toStdString() << sep
                 << std::endl;
@@ -106,7 +108,6 @@ void PopulateProcessingContext(ProcessingContext* ctxt, GithubFetch& github_daem
         std::cout
                 << r->repository()->name().toStdString() << sep
                 << r->tagName().toStdString() << sep
-//                << r->repository()->tag(r->tagName())->commit().toStdString() << sep
                 << a->id() << sep
                 << a->name().toStdString() << sep
                 << a->size() << sep
@@ -123,6 +124,21 @@ void PopulateProcessingContext(ProcessingContext* ctxt, GithubFetch& github_daem
                 << rl->tagName().toStdString() << sep
                 << std::endl;
         github_daemon.requestDelete(rl);
+    };
+    auto delete_tag = [&](GithubRepo*, GithubTag* tag)
+    {
+        std::cout
+                << tag->name().toStdString() << sep
+                << tag->commit().toStdString()
+                << std::endl;
+        github_daemon.requestDelete(tag);
+    };
+    auto delete_asset = [&](GithubRelease*, GithubAsset* asset)
+    {
+        std::cout
+                << asset->id() << sep
+                << asset->name().toStdString()
+                << std::endl;
     };
 
     /* Deepening functions */
@@ -155,6 +171,8 @@ void PopulateProcessingContext(ProcessingContext* ctxt, GithubFetch& github_daem
     ctxt->show_asset = show_asset;
 
     ctxt->delete_release = delete_release;
+    ctxt->delete_tag = delete_tag;
+    ctxt->delete_asset = delete_asset;
 }
 
 #endif

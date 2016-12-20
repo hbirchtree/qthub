@@ -58,26 +58,27 @@ int main(int argc, char *argv[])
 
                 "list repository [username]\n"
                 "list [tag|release"
-                "|asset"
 //                "|pr"
                 "] [repo]\n"
                 "list asset [repo:release] [filter]\n"
 
                 "show [user|repository] [name]\n"
-                "show [tag|release|pr] [repo] [filter]\n"
-                "show asset [repo:release] [filter]\n"
+                "show [tag|release"
+//                "|pr"
+                "] [repo] [filter]\n"
+                "show asset [repo] [filter]\n"
 //                "show pr [repo] [id]\n"
 
-                "delete release [repo] [name]\n"
-//                "delete asset [repo:release] [id]\n"
+                "delete [release|tag] [repo] [name]\n"
+//                "delete asset [repo] [id]\n"
 //                "delete pr [repo] [id]\n"
 
 //                "push release [repo] [name]\n"
-//                "push asset [repo:release] [name]\n"
+//                "push asset [repo] [name]\n"
 //                "push pr [repo] [name]\n"
 
 //                "pull [tag|release] [repo] [name]\n"
-//                "pull asset [repo:release] [id]\n"
+//                "pull asset [repo] [id]\n"
                 ,
 
                 "[action]");
@@ -185,7 +186,6 @@ void processInputs(QCommandLineParser& parser,
 
     if(action == "list")
     {
-
         if(category == "repository")
         {
             QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
@@ -242,6 +242,10 @@ void processInputs(QCommandLineParser& parser,
                         c.list_asset(rel, asset);
             });
             c.github_daemon->fetchRepo(args[0]);
+        }else if(category == "pr")
+        {
+            qDebug("Implementation needed");
+            QCoreApplication::exit();
         }else
         {
             parser.showHelp(1);
@@ -284,22 +288,20 @@ void processInputs(QCommandLineParser& parser,
             c.github_daemon->fetchUser(item);
         }else if(category == "asset")
         {
-            QStringList args = item.split(":");
-            if(args.size() >= 2)
-                filter_rgx = QRegExp(args[1]);
-            else
-                parser.showHelp(1);
-
             QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
                              c.get_repo_releases);
             QObject::connect(c.github_daemon, &GithubFetch::assetUpdated,
                              [&](GithubRelease* rel, GithubAsset* asset)
             {
-                if(rel->tagName().contains(filter_rgx))
-                    if(asset->name().contains(filter_asset))
-                        c.show_asset(rel, asset);
+                if(QString("%1").arg(asset->id()) == filter_asset.pattern()
+                        || asset->name().contains(filter_asset))
+                    c.show_asset(rel, asset);
             });
-            c.github_daemon->fetchRepo(args[0]);
+            c.github_daemon->fetchRepo(item);
+        }else if(category == "pr")
+        {
+            qDebug("Implementation needed");
+            QCoreApplication::exit();
         }else
         {
             parser.showHelp(1);
@@ -325,6 +327,33 @@ void processInputs(QCommandLineParser& parser,
                     c.delete_release(repo, rel);
             });
             c.github_daemon->fetchRepo(item);
+        }else if(category == "tag")
+        {
+            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                             c.get_repo_tags);
+            QObject::connect(c.github_daemon, &GithubFetch::tagUpdated,
+                             [&](GithubRepo* repo, GithubTag* tag)
+            {
+                if(tag->name().contains(filter_rgx))
+                    c.delete_tag(repo, tag);
+            });
+            c.github_daemon->fetchRepo(item);
+        }else if(category == "asset")
+        {
+            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                             c.get_repo_releases);
+            QObject::connect(c.github_daemon, &GithubFetch::assetUpdated,
+                             [&](GithubRelease* rel, GithubAsset* asset)
+            {
+                if(QString("%1").arg(asset->id()) == item2
+                        || asset->name().contains(filter_rgx))
+                    c.delete_asset(rel, asset);
+            });
+            c.github_daemon->fetchRepo(item);
+        }else if(category == "pr")
+        {
+            qDebug("Implementation needed");
+            QCoreApplication::exit();
         }else
         {
             parser.showHelp(1);
@@ -333,23 +362,32 @@ void processInputs(QCommandLineParser& parser,
     {
         if(category == "release")
         {
-
-        }else if(category == "repository")
+            qDebug("Implementation needed");
+            QCoreApplication::exit();
+        }else if(category == "asset")
         {
-
-        }else if(category == "release-file")
+            qDebug("Implementation needed");
+            QCoreApplication::exit();
+        }else if(category == "pr")
         {
-
+            qDebug("Implementation needed");
+            QCoreApplication::exit();
         }else
             QCoreApplication::exit();
     }else if(action == "pull")
     {
-        if(category == "release-file")
+        if(category == "asset")
         {
-
+            qDebug("Implementation needed");
+            QCoreApplication::exit();
+        }else if(category == "release")
+        {
+            qDebug("Implementation needed");
+            QCoreApplication::exit();
         }else if(category == "tag")
         {
-
+            qDebug("Implementation needed");
+            QCoreApplication::exit();
         }else
             QCoreApplication::exit(1);
     }else{

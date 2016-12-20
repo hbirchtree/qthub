@@ -6,6 +6,8 @@
 #include <QDateTime>
 #include <QUrl>
 
+class GithubRepo;
+
 class GithubTag : public QObject
 {
     Q_OBJECT
@@ -20,6 +22,8 @@ class GithubTag : public QObject
 
 public:
     explicit GithubTag(QObject* parent = 0);
+
+    GithubRepo* repository() const;
 
     QString name() const
     {

@@ -27,12 +27,16 @@ class GithubFetch : public QObject
         GitUser,
         GitRelease,
 
+        GitReadme,
+
         GitAllRepos,
         GitAllReleases,
         GitAllTags,
         GitAllAssets,
 
         GitReleaseDelete,
+        GitTagDelete,
+        GitAssetDelete,
 
         GitDownload,
         GitUpload,
@@ -100,11 +104,20 @@ signals:
     void tagUpdated(GithubRepo* repo, GithubTag* tag);
     void assetUpdated(GithubRelease* release, GithubAsset* file);
 
+    void readmeUpdated(GithubRepo* repo);
+
 private slots:
     void startNetworkRequest(const QString &url,
                              const QString &id,
                              ReplyType receive,
                              int page = 1);
+
+    void deleteResource(const QString &rsrc, const QString &id, ReplyType receive);
+    void pushResource(QString const& rsrc, const QString &id, ReplyType receive,
+                      QByteArray const& data);
+    void pullResource(QString const& rsrc, const QString &id, ReplyType receive,
+                      const QString &target);
+
     void receiveUserData();
 
     void registerProgress(qint64 rec, qint64 tot);
@@ -116,6 +129,8 @@ public slots:
     void fetchRepo(QString const& reponame);
     void fetchRelease(GithubRepo* repo, quint64 relId);
 
+    void fetchReadme(GithubRepo* repo);
+
     void fetchAllRepositories(GithubUser* user);
     void fetchAllReleases(GithubRepo* repo);
     void fetchAllTags(GithubRepo* repo);
@@ -123,6 +138,8 @@ public slots:
     void fetchSelf();
 
     void requestDelete(GithubRelease* release);
+    void requestDelete(GithubTag* tag);
+    void requestDelete(GithubAsset* tag);
 
     void killAll();
 };

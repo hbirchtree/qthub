@@ -37,6 +37,7 @@ class GithubRepo : public QObject
     Q_PROPERTY(quint64 watchers READ watchers WRITE setWatchers NOTIFY watchersChanged)
 
     Q_PROPERTY(QString branch READ branch WRITE setBranch NOTIFY branchChanged)
+    Q_PROPERTY(QString readme READ readme WRITE setReadme NOTIFY readmeChanged)
 
     Q_PROPERTY(QVector<GithubTag*> tags READ tags)
     Q_PROPERTY(QVector<GithubRelease*> releases READ releases)
@@ -51,6 +52,7 @@ class GithubRepo : public QObject
 
     QString m_language;
     QString m_branch;
+    QString m_readme;
     quint64 m_sourceId;
 
     quint64 m_issues;
@@ -69,6 +71,7 @@ class GithubRepo : public QObject
         };
         quint8 m_bitfield_store;
     };
+
 
 public:
     explicit GithubRepo(QObject *parent = 0);
@@ -169,6 +172,11 @@ public:
         return m_private;
     }
 
+    QString readme() const
+    {
+        return m_readme;
+    }
+
 signals:
     void idChanged(quint64 id);
     void nameChanged(QString name);
@@ -182,6 +190,8 @@ signals:
     void privateChanged(bool privt);
     void watchersChanged(quint64 watchers);
     void branchChanged(QString branch);
+
+    void readmeChanged(QString readme);
 
 public slots:
 
@@ -293,6 +303,14 @@ public slots:
 
         m_private = privt;
         emit privateChanged(privt);
+    }
+    void setReadme(QString readme)
+    {
+        if (m_readme == readme)
+            return;
+
+        m_readme = readme;
+        emit readmeChanged(readme);
     }
 };
 
