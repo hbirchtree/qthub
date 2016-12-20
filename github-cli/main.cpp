@@ -16,6 +16,7 @@
 const char* const api_token_str = "api-token";
 const char* const filter_str = "filter";
 const char* const separator_str = "separator";
+const char* const label_str = "label";
 
 const char* const action_str = "action";
 const char* const category_str = "category";
@@ -51,6 +52,9 @@ int main(int argc, char *argv[])
     parser.addOption(QCommandLineOption(separator_str,
                                         "Separator for output data",
                                         "|"));
+    parser.addOption(QCommandLineOption(label_str,
+                                        "Label for uploaded files",
+                                        "description"));
 
     parser.addPositionalArgument(
                 action_str,
@@ -76,7 +80,7 @@ int main(int argc, char *argv[])
 //                "delete pr [repo] [id]\n"
 
                 "push release [repo] [name]\n"
-                "push asset [repo] [name]\n"
+                "push asset [repo] [name] [--label <description>]\n"
 //                "push pr [repo] [name]\n"
 
                 "pull repository [repo]\n"
@@ -418,7 +422,7 @@ void processInputs(QCommandLineParser& parser,
             {
                 if(rel->tagName().contains(filter_rgx))
                 {
-                    c.push_asset(rel, filter_asset.pattern(), "", ftype, data);
+                    c.push_asset(rel, filter_asset.pattern(), parser.value(label_str), ftype, data);
                 }
             });
             c.github_daemon->fetchRepo(args[0]);

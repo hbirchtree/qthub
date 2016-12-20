@@ -465,9 +465,11 @@ void GithubFetch::requestUploadAsset(GithubRelease* rel,
                                      const QString &type,
                                      const QByteArray &data)
 {
+    QString label_cpy = label;
+    label_cpy.replace(" ", "%20");
     pushResource(rel->uploadUrl(),
-                 QString("?name=%3")
-                 .arg(fname),
+                 QString("?name=%1&label=%2")
+                 .arg(fname).arg(label_cpy),
                  QString("%1:%2/assets:%3")
                  .arg(rel->repository()->name())
                  .arg(rel->id()).arg(fname),

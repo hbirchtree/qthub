@@ -111,15 +111,16 @@ signals:
 
     void readmeUpdated(GithubRepo* repo);
 
+    /* File download signals */
     void downloadFailed(QUrl const& url, QString const& filename);
     void downloadSuccess(QUrl const& url, QString const& filename);
 
 private slots:
+    /* Resource handling over HTTP */
     void startNetworkRequest(const QString &url,
                              const QString &id,
                              ReplyType receive,
                              int page = 1);
-
     void deleteResource(const QString &rsrc, const QString &id, ReplyType receive);
     void pushResource(const QString &apipoint, QString const& rsrc,
                       const QString &id, ReplyType receive, const QString &type,
@@ -127,10 +128,13 @@ private slots:
     void pullResource(QString const& rsrc, const QString &id, ReplyType receive,
                       const QString &target, bool asset = false);
 
+    /* Receiving all of the types of requests... Ouch. */
     void receiveUserData();
 
+    /* Progression and stuff */
     void registerProgress(qint64 rec, qint64 tot);
 
+    /* Special place for downloading files */
     void downloadFile(QUrl const& url, QString const& file);
 
 public slots:
