@@ -8,7 +8,7 @@ compiler:
 - gcc
 
 install:
-- apt install qt5-default git
+- sudo apt install qt5-default git
 
 script:
 - mkdir build
