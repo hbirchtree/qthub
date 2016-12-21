@@ -1,0 +1,32 @@
+language: cpp
+sudo: required
+dist: trusty
+
+os:
+- linux
+compiler:
+- gcc
+
+install:
+- apt install qt5-default git
+
+script:
+- mkdir build
+- cd build
+- qmake ..
+- make -j8
+
+notifications:
+  email: true
+
+branches:
+  only:
+  - master
+  - testing
+
+deploy:
+  provider: releases
+  api_key: "${GITHUB_TOKEN}"
+  file: "github-cli/github-cli"
+  on:
+    branch: master
