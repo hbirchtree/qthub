@@ -186,7 +186,8 @@ void GithubFetch::receiveUserData()
         case GitRelease:
         {
             GithubRepo* r = m_repos.value(o->property("id").toString());
-            QJsonArray arr = {doc.object()};
+            QJsonArray arr = QJsonArray();
+            arr.append(doc.object());
             if(r)
                 addReleases(r, arr);
             break;
