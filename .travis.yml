@@ -9,6 +9,7 @@ compiler:
 - clang
 
 install:
+- sudo apt update
 - sudo apt install qt5-default git
 
 script:
