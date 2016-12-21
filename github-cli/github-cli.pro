@@ -1,8 +1,9 @@
 TEMPLATE = app
 
 # Configuration
+QT -= gui
 QT += network
-CONFIG += c++11 link_prl
+CONFIG += c++11 link_prl console
 
 SOURCES += main.cpp
 INCLUDEPATH += ../libgithub/include

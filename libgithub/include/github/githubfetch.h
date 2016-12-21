@@ -88,17 +88,24 @@ private:
 
 signals:
     void statusChanged(QNetworkAccessManager::NetworkAccessibility acc);
+    void rateLimitUpdated(int remaining, int limit);
+    void agentStringIdentifier(QString const& agent);
 
     /* Progression signals */
     void reportProgress(QString const& dl, qint64 rec, qint64 tot);
+    void replyReceived(QString const& source, QString const& status);
 
     /* Errors */
     void authenticationError();
     void contentNotFound();
     void networkReplyError(int errorCode);
+    void fileFailure(QString const& filename, QString const& errString);
+    void parsingError(QString const& source, QString const& errString);
 
     /* Completion signals */
+    void initComplete();
     void authenticated();
+    void authenticatedNull();
     void transferCompleted();
 
     void selfUpdated(GithubUser* self);
@@ -169,6 +176,8 @@ public slots:
                             QString const& label,
                             QString const& type,
                             QByteArray const& data);
+
+    void initProcessing();
 
     void killAll();
 };

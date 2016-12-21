@@ -9,6 +9,9 @@ CONFIG += c++11 staticlib create_prl
 
 SOURCES += \
     src/githubfetch.cpp \
+    src/githubfetch_object_builders.cpp \
+    src/githubfetch_request_handlers.cpp \
+    src/githubfetch_network_handlers.cpp \
     src/githubrelease.cpp \
     src/githubrepo.cpp \
     src/githubuser.cpp \

@@ -1,3 +1,8 @@
+#ifdef NDEBUG
+#define QT_NO_DEBUG
+#define QT_NO_DEBUG_OUTPUT
+#endif
+
 #include <QCoreApplication>
 #include <QCommandLineParser>
 #include <QCommandLineOption>
@@ -160,6 +165,21 @@ int main(int argc, char *argv[])
     {
         qDebug().noquote() << "Failure:" << url.toString() << file;
     });
+    QObject::connect(&github_daemon, &GithubFetch::rateLimitUpdated,
+                     [&](int rem, int lim)
+    {
+        qDebug().nospace() << "Rate limit: " << rem << "/" << lim;
+    });
+    QObject::connect(&github_daemon, &GithubFetch::parsingError,
+                     [&](QString const&, QString const& err)
+    {
+        qDebug().nospace() << "JSON parsing error: " << err;
+    });
+    QObject::connect(&github_daemon, &GithubFetch::fileFailure,
+                     [&](QString const& fname, QString const& err)
+    {
+        qDebug().nospace() << "File error: " << fname << ":" << err;
+    });
 
     /* Exit condition */
     QObject::connect(&github_daemon, &GithubFetch::transferCompleted,
@@ -171,7 +191,11 @@ int main(int argc, char *argv[])
 
     /* Synchronize on fetchSelf() */
     QObject::connect(&github_daemon, &GithubFetch::authenticated,
-                     launch_processing);
+                     [&]()
+    {
+        qDebug().noquote() << "Using OAuth authentication";
+        launch_processing();
+    });
     QObject::connect(&github_daemon, &GithubFetch::authenticationError,
                      launch_processing);
 
