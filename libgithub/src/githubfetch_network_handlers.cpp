@@ -105,7 +105,7 @@ void GithubFetch::receiveUserData()
         {
         case QNetworkReply::NoError:
             break;
-        case QNetworkReply::ContentNotFoundError:
+        case 204:
             transferCompleted();
             contentNotFound();
             return;

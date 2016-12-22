@@ -1,5 +1,4 @@
-#ifdef NDEBUG
-#define QT_NO_DEBUG
+#ifndef NDEBUG
 #define QT_NO_DEBUG_OUTPUT
 #endif
 

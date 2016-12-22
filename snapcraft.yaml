@@ -1,0 +1,28 @@
+name: githubqit
+version: 1.0
+summary: Github REST CLI app
+description: Github CLI/QML client
+confinement: strict
+grade: devel
+icon: meta/gui/icon.png
+
+apps:
+  cli:
+    command: opt/github-cli/bin/github-cli
+    plugs:
+    - network
+
+parts:
+  all:
+    plugin: qmake
+    qt-version: qt5
+    build-packages:
+    - qt5-default
+    - build-essential
+    stage-packages:
+    - libqt5network5
+    - libqt5core5a
+    stage:
+    - opt
+    - usr
+    - lib

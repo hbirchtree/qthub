@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Github Client
+Icon=${SNAP}/meta/gui/icon.png
+GenericName=Github Client
+Comment=QML client for Github using REST
+Exec=githubqit.qml %U
+StartupNotify=true
+StartupWMClass=github-qml
+Categories=Networking;Development
