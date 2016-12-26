@@ -1,5 +1,8 @@
 #include <github/github.h>
 
+#include <QJsonDocument>
+#include <QJsonObject>
+
 void GithubFetch::requestDelete(GithubRelease *release)
 {
     GithubRepo* repo = release->repository();
@@ -104,18 +107,87 @@ void GithubFetch::requestDownload(GithubRepo *repo, const QString &ref)
 }
 
 void GithubFetch::requestUploadAsset(GithubRelease* rel,
-                                     const QString &fname,
-                                     const QString &label,
-                                     const QString &type,
+                                     GithubAsset *asset,
                                      const QByteArray &data)
 {
-    QString label_cpy = label;
+    QString label_cpy = asset->label();
     label_cpy.replace(" ", "%20");
     pushResource(rel->uploadUrl(),
                  QString("?name=%1&label=%2")
-                 .arg(fname).arg(label_cpy),
+                 .arg(asset->name()).arg(label_cpy),
                  QString("%1:%2/assets:%3")
                  .arg(rel->repository()->name())
-                 .arg(rel->id()).arg(fname),
-                 GitUpload, type, data);
+                 .arg(rel->id()).arg(asset->name()),
+                 GitUpload, asset->type(), data);
+}
+
+void GithubFetch::requestCreateRelease(GithubRelease *rel)
+{
+    QJsonDocument doc;
+    QJsonObject object;
+    object["tag_name"] = rel->tagName();
+    object["target_commitish"] = rel->branch();
+    object["name"] = rel->name();
+    object["body"] = rel->description();
+    object["draft"] = rel->draft();
+    object["prerelease"] = rel->prerelease();
+    doc.setObject(object);
+
+    pushResource(m_apipoint,
+                 QString("/repos/%1/releases")
+                 .arg(rel->repository()->name()),
+                 QString("%1:%2")
+                 .arg(rel->repository()->name()).arg(rel->tagName()),
+                 GitAllReleases, "application/json",
+                 doc.toJson());
+}
+
+void GithubFetch::requestCreateTag(GithubTag *tag, GithubCommit* commit)
+{
+    QJsonDocument doc;
+    QJsonObject object;
+    object["tag"] = tag->name();
+    object["type"] = "commit";
+    object["object"] = commit->sha();
+    object["message"] = (tag->message().size() ? tag->message() : " - Auto-generated tag");
+    {
+        QJsonObject author;
+        author["name"] = m_store->self()->name();
+        author["email"] = m_store->self()->email();
+        {
+            QDateTime current = QDateTime::currentDateTime();
+            current.setTimeSpec(Qt::OffsetFromUTC);
+            author["date"] = current.toString(Qt::ISODate);
+        }
+        object["tagger"] = author;
+    }
+
+    doc.setObject(object);
+
+    pushResource(m_apipoint,
+                 QString("/repos/%1/git/tags")
+                 .arg(tag->repository()->name()),
+                 QString("%1:%2")
+                 .arg(tag->repository()->name()).arg(tag->name()),
+                 GitAllTags, "application/json",
+                 doc.toJson());
+
+    object = QJsonObject();
+    object["ref"] = QString("refs/tags/%1").arg(tag->name());
+    object["sha"] = commit->sha();
+
+    doc.setObject(object);
+
+    pushResource(m_apipoint,
+                 QString("/repos/%1/git/refs")
+                 .arg(tag->repository()->name()),
+                 QString("%1:%2")
+                 .arg(tag->repository()->name()),
+                 GitAllRefs, "application/json",
+                 doc.toJson());
+}
+
+void GithubFetch::requestCreateBranch(GithubBranch *branch)
+{
+    Q_UNUSED(branch);
 }

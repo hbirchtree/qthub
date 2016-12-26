@@ -1,6 +1,6 @@
-#ifndef NDEBUG
-#define QT_NO_DEBUG_OUTPUT
-#endif
+//#ifndef NDEBUG
+//#define QT_NO_DEBUG_OUTPUT
+//#endif
 
 #include <QCoreApplication>
 #include <QCommandLineParser>
@@ -21,6 +21,8 @@ const char* const api_token_str = "api-token";
 const char* const filter_str = "filter";
 const char* const separator_str = "separator";
 const char* const label_str = "label";
+const char* const commit_str = "commit";
+const char* const branch_str = "branch";
 
 const char* const action_str = "action";
 const char* const category_str = "category";
@@ -59,6 +61,12 @@ int main(int argc, char *argv[])
     parser.addOption(QCommandLineOption(label_str,
                                         "Label for uploaded files",
                                         "description"));
+    parser.addOption(QCommandLineOption(commit_str,
+                                        "Commit SHA to be used if applicable",
+                                        "sha"));
+    parser.addOption(QCommandLineOption(branch_str,
+                                        "Branch name to be used if applicable",
+                                        "branch-name"));
 
     parser.addPositionalArgument(
                 action_str,
@@ -84,7 +92,7 @@ int main(int argc, char *argv[])
 //                "delete pr [repo] [id]\n"
 
                 "push release [repo] [name]\n"
-                "push asset [repo] [name] [--label <description>]\n"
+                "push asset [repo:release] [name] [--label <description>]\n"
 //                "push pr [repo] [name]\n"
 
                 "pull repository [repo]\n"
@@ -114,7 +122,10 @@ int main(int argc, char *argv[])
         parser.showHelp();
     }
 
-    GithubFetch github_daemon(application_identifier, &app);
+    GithubStore github_store(&app);
+    GithubFetch github_daemon(&github_store,
+                              application_identifier,
+                              &app);
 
     if(!parser.value(api_token_str).isEmpty())
         github_daemon.authenticate(parser.value(api_token_str));
@@ -238,10 +249,10 @@ void processInputs(QCommandLineParser& parser,
             QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
                              c.get_repo_branches);
             QObject::connect(c.github_daemon, &GithubFetch::branchUpdated,
-                             [&](GithubRepo* r, GithubBranch* branch)
+                             [&](GithubBranch* branch)
             {
                 if(branch->name().contains(filter_rgx))
-                    c.list_branch(r, branch);
+                    c.list_branch(branch);
             });
             c.github_daemon->fetchRepo(item);
         }else if(category == "release")
@@ -249,11 +260,11 @@ void processInputs(QCommandLineParser& parser,
             QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
                              c.get_repo_releases);
             QObject::connect(c.github_daemon, &GithubFetch::releaseUpdated,
-                             [&](GithubRepo* r, GithubRelease* rl)
+                             [&](GithubRepo*, GithubRelease* rl)
             {
                 /* Filter releases based on their tags */
                 if(rl->tagName().contains(filter_rgx))
-                    c.list_release(r, rl);
+                    c.list_release(rl);
             });
             c.github_daemon->fetchRepo(item);
         }else if(category == "tag")
@@ -261,11 +272,11 @@ void processInputs(QCommandLineParser& parser,
             QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
                              c.get_repo_tags);
             QObject::connect(c.github_daemon, &GithubFetch::tagUpdated,
-                             [&](GithubRepo* r, GithubTag* tag)
+                             [&](GithubRepo*, GithubTag* tag)
             {
                 /* Filter tags based on filter provided, regex */
                 if(tag->name().contains(filter_rgx))
-                    c.list_tag(r, tag);
+                    c.list_tag(tag);
             });
             c.github_daemon->fetchRepo(item);
         }else if(category == "asset")
@@ -290,7 +301,7 @@ void processInputs(QCommandLineParser& parser,
                 /* Releases also acquire asset details! */
                 if(rel->tagName().contains(filter_rgx))
                     if(asset->name().contains(filter_asset))
-                        c.list_asset(rel, asset);
+                        c.list_asset(asset);
             });
             c.github_daemon->fetchRepo(args[0]);
         }else if(category == "pr")
@@ -313,10 +324,10 @@ void processInputs(QCommandLineParser& parser,
             QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
                              c.get_repo_branches);
             QObject::connect(c.github_daemon, &GithubFetch::branchUpdated,
-                             [&](GithubRepo* r, GithubBranch* branch)
+                             [&](GithubBranch* branch)
             {
                 if(branch->name().contains(filter_asset))
-                    c.show_branch(r, branch);
+                    c.show_branch(branch->repository(), branch);
             });
             c.github_daemon->fetchRepo(item);
         }else if(category == "release")
@@ -418,8 +429,43 @@ void processInputs(QCommandLineParser& parser,
     {
         if(category == "release")
         {
-            qDebug("Implementation needed");
-            QCoreApplication::exit();
+
+        }else if(category == "tag")
+        {
+            static QStringList args = item.split(":");
+            if(args.size() >= 2)
+                filter_rgx = QRegExp(args[1]);
+            else
+                parser.showHelp(1);
+
+            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                             c.get_repo_branches);
+            QObject::connect(c.github_daemon, &GithubFetch::branchUpdated,
+                             [&](GithubBranch* b)
+            {
+                if(b->name() == args[1])
+                    c.get_branch_head(b);
+            });
+            QObject::connect(c.github_daemon, &GithubFetch::commitUpdated,
+                             [&](GithubBranch* branch, GithubCommit* commit)
+            {
+                GithubTag* t = new GithubTag(branch->repository());
+                t->setName(filter_asset.pattern());
+                c.github_daemon->requestCreateTag(t, commit);
+            });
+            QObject::connect(c.github_daemon, &GithubFetch::uploadSuccess,
+                             [&](QUrl const&)
+            {
+                qDebug() << "Exited";
+                QCoreApplication::exit(0);
+            });
+            QObject::connect(c.github_daemon, &GithubFetch::uploadFailed,
+                             [&](QUrl const& u)
+            {
+                qDebug().noquote().nospace() << "Failure: " << u.toString();
+                QCoreApplication::exit(1);
+            });
+            c.github_daemon->fetchRepo(args[0]);
         }else if(category == "asset")
         {
             QStringList args = item.split(":");
@@ -431,11 +477,12 @@ void processInputs(QCommandLineParser& parser,
             QFile file(item2);
             if(!file.open(QFile::ReadOnly))
             {
-                qWarning().noquote() << "Failed to open file:" << file.fileName() << ":" << file.errorString();
+                qWarning().noquote()
+                        << "Failed to open file:"
+                        << file.fileName() << ":" << file.errorString();
                 QCoreApplication::exit(1);
             }
 
-            static QString ftype = "application/octet-stream";
             static QByteArray data = file.readAll();
 
             QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
@@ -443,9 +490,15 @@ void processInputs(QCommandLineParser& parser,
             QObject::connect(c.github_daemon, &GithubFetch::releaseUpdated,
                              [&](GithubRepo*, GithubRelease* rel)
             {
+
                 if(rel->tagName().contains(filter_rgx))
                 {
-                    c.push_asset(rel, filter_asset.pattern(), parser.value(label_str), ftype, data);
+                    GithubAsset* ast = new GithubAsset(rel);
+                    ast->setName(filter_asset.pattern());
+                    ast->setLabel(parser.value(label_str));
+                    ast->setType("application/octet-stream");
+
+                    c.push_asset(ast, data);
                 }
             });
             c.github_daemon->fetchRepo(args[0]);
@@ -487,10 +540,10 @@ void processInputs(QCommandLineParser& parser,
             QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
                              c.get_repo_branches);
             QObject::connect(c.github_daemon, &GithubFetch::branchUpdated,
-                             [&](GithubRepo* repo, GithubBranch* branch)
+                             [&](GithubBranch* branch)
             {
                 if(branch->name().contains(filter_asset))
-                    c.pull_branch(repo, branch);
+                    c.pull_branch(branch->repository(), branch);
             });
             c.github_daemon->fetchRepo(item);
         }else if(category == "tag")

@@ -12,6 +12,8 @@ class GithubTag;
 class GithubRelease;
 class GithubAsset;
 class GithubBranch;
+class GithubCommit;
+class GithubStore;
 
 class QNetworkAccessManager;
 
@@ -29,25 +31,25 @@ class GithubFetch : public QObject
         GitRelease,
 
         GitReadme,
+        GitBranchHead,
 
         GitAllRepos,
         GitAllReleases,
         GitAllTags,
         GitAllAssets,
         GitAllBranches,
+        GitAllRefs,
 
         GitReleaseDelete,
         GitTagDelete,
         GitAssetDelete,
 
+        GitReleaseCreate,
+        GitTagCreate,
+
         GitDownload,
         GitUpload,
     };
-
-    QMap<QString, GithubUser*> m_users;
-    QMap<QString, GithubRepo*> m_repos;
-
-    GithubUser* m_self;
 
     QNetworkAccessManager* m_netman;
     QString m_apipoint;
@@ -58,9 +60,11 @@ class GithubFetch : public QObject
 
     bool m_authenticated;
 
+    GithubStore* m_store;
+
 public:
     explicit GithubFetch(QObject *parent = 0);
-    explicit GithubFetch(QString identifier, QObject *parent = 0);
+    explicit GithubFetch(GithubStore* store, QString identifier, QObject *parent = 0);
 
     QNetworkAccessManager::NetworkAccessibility status()
     {
@@ -83,6 +87,9 @@ private:
     void addReleases(GithubRepo* u, QJsonArray const& rels);
     void addTags(GithubRepo* u, QJsonArray const& tags);
     void addBranches(GithubRepo* u, QJsonArray const& branches);
+    void addCommits(GithubRepo* u, QJsonArray const& commits, GithubBranch *b = nullptr);
+
+    void addBranchHead(GithubBranch* b, QJsonObject const& head);
 
     void addAssets(GithubRelease* r, QJsonArray const& assets);
 
@@ -111,16 +118,20 @@ signals:
     void selfUpdated(GithubUser* self);
     void userUpdated(GithubUser* user);
     void repoUpdated(GithubRepo* repo);
-    void branchUpdated(GithubRepo* repo, GithubBranch* branch);
+    void branchUpdated(GithubBranch* branch);
     void releaseUpdated(GithubRepo* repo, GithubRelease* release);
     void tagUpdated(GithubRepo* repo, GithubTag* tag);
     void assetUpdated(GithubRelease* release, GithubAsset* file);
+    void commitUpdated(GithubBranch* branch, GithubCommit* commit);
 
     void readmeUpdated(GithubRepo* repo);
 
     /* File download signals */
     void downloadFailed(QUrl const& url, QString const& filename);
     void downloadSuccess(QUrl const& url, QString const& filename);
+
+    void uploadFailed(QUrl const& url);
+    void uploadSuccess(QUrl const& url);
 
 private slots:
     /* Resource handling over HTTP */
@@ -151,6 +162,7 @@ public slots:
     void fetchRepo(QString const& reponame);
     void fetchRelease(GithubRepo* repo, quint64 relId);
 
+    void fetchBranchHead(GithubBranch* branch);
     void fetchReadme(GithubRepo* repo);
 
     void fetchAllRepositories(GithubUser* user);
@@ -172,10 +184,11 @@ public slots:
     void requestDownload(GithubRepo* repo, QString const& ref);
 
     void requestUploadAsset(GithubRelease *rel,
-                            QString const& fname,
-                            QString const& label,
-                            QString const& type,
+                            GithubAsset* asset,
                             QByteArray const& data);
+    void requestCreateRelease(GithubRelease* rel);
+    void requestCreateTag(GithubTag* tag, GithubCommit* commit);
+    void requestCreateBranch(GithubBranch* branch);
 
     void initProcessing();
 

@@ -64,6 +64,8 @@ void GithubFetch::pushResource(QString const& apipoint,
     req.setHeader(QNetworkRequest::ContentTypeHeader, type);
     addToken(req);
 
+    qDebug() << data;
+
     QNetworkReply* rep = m_netman->post(req, data);
     rep->setProperty("type", receive);
     rep->setProperty("id", id);
@@ -101,6 +103,8 @@ void GithubFetch::receiveUserData()
         replyReceived(rep->url().toString(), rep->rawHeader("Status"));
 
         /* Check for error */
+        qDebug().noquote().nospace()
+                << "Response: " << rep->url().toString() << rep->rawHeader("Status");
         switch(rep->error())
         {
         case QNetworkReply::NoError:
@@ -155,17 +159,17 @@ void GithubFetch::receiveUserData()
         {
             auto dobj = doc.object();
             QString obj_id = dobj["login"].toString();
-            GithubUser* u = m_users.value(obj_id);
+            GithubUser* u = m_store->users().value(obj_id);
             if(!u)
             {
                 u = new GithubUser(this);
-                m_users.insert(obj_id, u);
+                m_store->users().insert(obj_id, u);
             }
             updateUser(u, doc.object());
             if(o->property("id").toString() == ":self")
             {
                 selfUpdated(u);
-                m_self = u;
+                m_store->setSelf(u);
             }
             else
                 userUpdated(u);
@@ -173,11 +177,11 @@ void GithubFetch::receiveUserData()
         }
         case GitRepo:
         {
-            GithubRepo* r = m_repos.value(o->property("id").toString());
+            GithubRepo* r = m_store->repos().value(o->property("id").toString());
             if(!r)
             {
                 r = new GithubRepo(this);
-                m_repos.insert(o->property("id").toString(), r);
+                m_store->repos().insert(o->property("id").toString(), r);
             }
             updateRepo(r, doc.object());
             repoUpdated(r);
@@ -185,7 +189,7 @@ void GithubFetch::receiveUserData()
         }
         case GitRelease:
         {
-            GithubRepo* r = m_repos.value(o->property("id").toString());
+            GithubRepo* r = m_store->repos().value(o->property("id").toString());
             QJsonArray arr = QJsonArray();
             arr.append(doc.object());
             if(r)
@@ -194,30 +198,44 @@ void GithubFetch::receiveUserData()
         }
         case GitAllRepos:
         {
-            GithubUser* u = m_users.value(o->property("id").toString());
+            GithubUser* u = m_store->users().value(o->property("id").toString());
             if(u)
                 addRepositories(u, doc.array());
             break;
         }
         case GitAllTags:
         {
-            GithubRepo* r = m_repos.value(o->property("id").toString());
-            if(r)
+            GithubRepo* r = m_store->repos().value(o->property("id").toString());
+            if(r && doc.isArray())
                 addTags(r, doc.array());
+            else
+            {
+                qDebug() << doc;
+                uploadSuccess(rep->url());
+            }
             break;
         }
         case GitAllReleases:
         {
-            GithubRepo* r = m_repos.value(o->property("id").toString());
+            GithubRepo* r = m_store->repos().value(o->property("id").toString());
             if(r)
                 addReleases(r, doc.array());
             break;
         }
         case GitAllBranches:
         {
-            GithubRepo* r = m_repos.value(o->property("id").toString());
+            GithubRepo* r = m_store->repos().value(o->property("id").toString());
             if(r)
                 addBranches(r, doc.array());
+            break;
+        }
+        case GitBranchHead:
+        {
+            QStringList args = o->property("id").toString().split(":");
+            GithubRepo* r = m_store->repos().value(args[0]);
+            GithubBranch* b = r->branch(args[1]);
+            if(r)
+                addBranchHead(b, doc.object());
             break;
         }
         case GitDownload:

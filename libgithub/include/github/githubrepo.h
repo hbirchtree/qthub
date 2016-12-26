@@ -3,12 +3,14 @@
 
 #include <QObject>
 #include <QDateTime>
-#include <QVector>
+#include <QMap>
 #include <QPointer>
+#include <QVariantMap>
 
 class GithubRelease;
 class GithubTag;
 class GithubBranch;
+class GithubCommit;
 
 class GithubRepo : public QObject
 {
@@ -40,9 +42,6 @@ class GithubRepo : public QObject
     Q_PROPERTY(QString branch READ branch WRITE setBranch NOTIFY branchChanged)
     Q_PROPERTY(QString readme READ readme WRITE setReadme NOTIFY readmeChanged)
 
-    Q_PROPERTY(QVector<GithubTag*> tags READ tags)
-    Q_PROPERTY(QVector<GithubRelease*> releases READ releases)
-
     quint64 m_id;
     QString m_name;
     QString m_title;
@@ -61,9 +60,10 @@ class GithubRepo : public QObject
     quint64 m_subscribers;
     quint64 m_watchers;
 
-    QVector<GithubRelease*> m_releases;
-    QVector<GithubTag*> m_tags;
-    QVector<GithubBranch*> m_branches;
+    QMap<quint64,GithubRelease*> m_releases;
+    QMap<QString,GithubTag*> m_tags;
+    QMap<QString,GithubBranch*> m_branches;
+    QMap<QString,GithubCommit*> m_commits;
 
     union {
         struct
@@ -78,27 +78,31 @@ class GithubRepo : public QObject
 public:
     explicit GithubRepo(QObject *parent = 0);
 
-    QVector<GithubTag*> const& tags() const
+    QMap<QString,GithubTag*> const& tags() const
     {
         return m_tags;
     }
-    QVector<GithubRelease*> const& releases() const
+    QMap<quint64,GithubRelease*> const& releases() const
     {
         return m_releases;
     }
 
     GithubTag* tag(QString const& name) const;
     GithubRelease *release(quint64 id) const;
+    GithubBranch *branch(QString const& name) const;
+    GithubCommit *commit(QString const& sha) const;
 
 public slots:
     void addRelease(GithubRelease* rel);
     void addTag(GithubTag* tag);
     void addBranch(GithubBranch* branch);
+    void addCommit(GithubCommit* commit);
 
 signals:
     void releaseAdded(GithubRelease* rel);
     void tagAdded(GithubTag* tag);
     void branchAdded(GithubBranch* branch);
+    void commitAdded(GithubCommit* commit);
 
 public:
     quint64 id() const

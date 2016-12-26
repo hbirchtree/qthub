@@ -57,7 +57,7 @@ void GithubFetch::addRepositories(GithubUser* u, QJsonArray const& repos)
         updateRepo(r, m);
 
         u->addRepository(r);
-        m_repos.insert(r->name(), r);
+        m_store->repos().insert(r->name(), r);
         repoUpdated(r);
     }
 }
@@ -121,8 +121,39 @@ void GithubFetch::addBranches(GithubRepo *u, const QJsonArray &branches)
         b->setCommit(m["commit"].toObject()["sha"].toString());
 
         u->addBranch(b);
-        branchUpdated(u, b);
+        branchUpdated(b);
     }
+}
+
+void GithubFetch::addCommits(GithubRepo *u, const QJsonArray &commits, GithubBranch* b)
+{
+    for(int i=0;i<commits.size();i++)
+    {
+        auto const& m = commits[i].toObject();
+
+        GithubCommit* c = new GithubCommit(u);
+
+        c->setSha(m["sha"].toString());
+        c->setMessage(m["message"].toString());
+
+        if(m["author"].isObject())
+        {
+        }
+        if(m["parents"].isArray() && m["parents"].toArray().size() >= 1)
+        {
+            c->setParent(m["parents"].toArray().first().toObject()["sha"].toString());
+        }
+
+        commitUpdated(b, c);
+        u->addCommit(c);
+    }
+}
+
+void GithubFetch::addBranchHead(GithubBranch *b, const QJsonObject &head)
+{
+    QJsonArray arr;
+    arr.append(head["object"]);
+    addCommits(b->repository(), arr, b);
 }
 
 void GithubFetch::addAssets(GithubRelease *r, const QJsonArray &assets)

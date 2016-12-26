@@ -18,7 +18,8 @@ static QQmlApplicationEngine* m_engine;
 
 static QObject* GenGithubDaemon(QQmlEngine*, QJSEngine*)
 {
-    GithubFetch* obj = new GithubFetch(application_identifier);
+    GithubStore* store = new GithubStore();
+    GithubFetch* obj = new GithubFetch(store, application_identifier);
 
     if(github_token)
         obj->authenticate(github_token);

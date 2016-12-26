@@ -1,7 +1,10 @@
 #include "githubfetch.h"
+#include "githubstore.h"
+
 #include "githubuser.h"
 #include "githubrepo.h"
 #include "githubtag.h"
 #include "githubrelease.h"
 #include "githubreleasefile.h"
 #include "githubbranch.h"
+#include "githubcommit.h"

@@ -1,7 +1,5 @@
 QT += network testlib
-
 QT -= gui
-
 
 TARGET = github
 TEMPLATE = lib
@@ -17,7 +15,8 @@ SOURCES += \
     src/githubuser.cpp \
     src/githubtag.cpp \
     src/githubreleasefile.cpp \
-    src/githubbranch.cpp
+    src/githubbranch.cpp \
+    src/githubcommit.cpp
 
 HEADERS += \
     include/github/githubfetch.h \
@@ -26,7 +25,8 @@ HEADERS += \
     include/github/githubuser.h \
     include/github/githubtag.h \
     include/github/githubreleasefile.h \
-    include/github/githubbranch.h
+    include/github/githubbranch.h \
+    include/github/githubcommit.h
 
 INCLUDEPATH += include
 

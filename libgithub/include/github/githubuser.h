@@ -5,8 +5,9 @@
 #include <QString>
 #include <QUrl>
 #include <QDateTime>
+#include <QVector>
 
-#include "githubrepo.h"
+class GithubRepo;
 
 class GithubUser : public QObject
 {

@@ -11,7 +11,6 @@
 
 GithubFetch::GithubFetch(QObject *parent) :
     QObject(parent),
-    m_self(nullptr),
     m_activeTransfers(0),
     m_authenticated(false)
 {
@@ -36,9 +35,12 @@ GithubFetch::GithubFetch(QObject *parent) :
     m_apipoint = "https://api.github.com";
 }
 
-GithubFetch::GithubFetch(QString identifier, QObject *parent) :
+GithubFetch::GithubFetch(GithubStore* store,
+                         QString identifier,
+                         QObject *parent) :
     GithubFetch(parent)
 {
+    m_store = store;
     m_agentstring = identifier;
 }
 
@@ -55,7 +57,7 @@ void GithubFetch::fetchAllRepositories(GithubUser *user)
     static const char* const private_repo = "/user/repos";
 
     QString path;
-    if(m_self == user)
+    if(m_store->self() == user)
         path = private_repo;
     else
         path = QString(public_repo).arg(user->login());
@@ -100,6 +102,16 @@ void GithubFetch::fetchRelease(GithubRepo *repo, quint64 relId)
                 .arg(repo->name()).arg(relId),
                 repo->name(),
                 GitRelease);
+}
+
+void GithubFetch::fetchBranchHead(GithubBranch *branch)
+{
+    startNetworkRequest(
+                QString("/repos/%1/git/refs/heads/%2")
+                .arg(branch->repository()->name()).arg(branch->name()),
+                QString("%1:%2")
+                .arg(branch->repository()->name()).arg(branch->name()),
+                GitBranchHead);
 }
 
 void GithubFetch::fetchReadme(GithubRepo *repo)
