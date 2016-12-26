@@ -458,6 +458,7 @@ void processInputs(QCommandLineParser& parser,
                         rel->setTagName(tag->name());
                         rel->setName(filter_asset.pattern());
                         rel->setDescription(parser.value(label_str));
+                        rel->setPrerelease(true);
 
                         c.github_daemon->requestCreateRelease(rel);
                     }
