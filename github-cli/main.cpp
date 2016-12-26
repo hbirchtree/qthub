@@ -21,8 +21,6 @@ const char* const api_token_str = "api-token";
 const char* const filter_str = "filter";
 const char* const separator_str = "separator";
 const char* const label_str = "label";
-const char* const commit_str = "commit";
-const char* const branch_str = "branch";
 
 const char* const action_str = "action";
 const char* const category_str = "category";
@@ -61,12 +59,6 @@ int main(int argc, char *argv[])
     parser.addOption(QCommandLineOption(label_str,
                                         "Label for uploaded files",
                                         "description"));
-    parser.addOption(QCommandLineOption(commit_str,
-                                        "Commit SHA to be used if applicable",
-                                        "sha"));
-    parser.addOption(QCommandLineOption(branch_str,
-                                        "Branch name to be used if applicable",
-                                        "branch-name"));
 
     parser.addPositionalArgument(
                 action_str,
@@ -91,8 +83,9 @@ int main(int argc, char *argv[])
                 "delete asset [repo] [id]\n"
 //                "delete pr [repo] [id]\n"
 
-                "push release [repo] [name]\n"
-                "push asset [repo:release] [name] [--label <description>]\n"
+                "push tag [repo:branch] [name]\n"
+                "push release [repo:tag] [name] {--label <description>}\n"
+                "push asset [repo:release] [name] {--label <description>}\n"
 //                "push pr [repo] [name]\n"
 
                 "pull repository [repo]\n"
@@ -427,10 +420,7 @@ void processInputs(QCommandLineParser& parser,
             parser.showHelp(1);
     }else if(action == "push")
     {
-        if(category == "release")
-        {
-
-        }else if(category == "tag")
+        if(category == "release" || category == "tag")
         {
             static QStringList args = item.split(":");
             if(args.size() >= 2)
@@ -438,21 +428,42 @@ void processInputs(QCommandLineParser& parser,
             else
                 parser.showHelp(1);
 
-            QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
-                             c.get_repo_branches);
-            QObject::connect(c.github_daemon, &GithubFetch::branchUpdated,
-                             [&](GithubBranch* b)
+            if(category == "tag")
             {
-                if(b->name() == args[1])
-                    c.get_branch_head(b);
-            });
-            QObject::connect(c.github_daemon, &GithubFetch::commitUpdated,
-                             [&](GithubBranch* branch, GithubCommit* commit)
-            {
-                GithubTag* t = new GithubTag(branch->repository());
-                t->setName(filter_asset.pattern());
-                c.github_daemon->requestCreateTag(t, commit);
-            });
+                QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                                 c.get_repo_branches);
+                QObject::connect(c.github_daemon, &GithubFetch::branchUpdated,
+                                 [&](GithubBranch* b)
+                {
+                    if(b->name() == args[1])
+                        c.get_branch_head(b);
+                });
+                QObject::connect(c.github_daemon, &GithubFetch::commitUpdated,
+                                 [&](GithubBranch* branch, GithubCommit* commit)
+                {
+                    GithubTag* t = new GithubTag(branch->repository());
+                    t->setName(filter_asset.pattern());
+                    c.github_daemon->requestCreateTag(t, commit);
+                });
+            }else{
+                QObject::connect(c.github_daemon, &GithubFetch::repoUpdated,
+                                 c.get_repo_tags);
+                QObject::connect(c.github_daemon, &GithubFetch::tagUpdated,
+                                 [&](GithubRepo* r, GithubTag* tag)
+                {
+                    if(tag->name() == args[1])
+                    {
+                        GithubRelease* rel = new GithubRelease(r);
+
+                        rel->setTagName(tag->name());
+                        rel->setName(filter_asset.pattern());
+                        rel->setDescription(parser.value(label_str));
+
+                        c.github_daemon->requestCreateRelease(rel);
+                    }
+                });
+            }
+
             QObject::connect(c.github_daemon, &GithubFetch::uploadSuccess,
                              [&](QUrl const&)
             {
