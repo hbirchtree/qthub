@@ -64,7 +64,8 @@ void GithubFetch::pushResource(QString const& apipoint,
     req.setHeader(QNetworkRequest::ContentTypeHeader, type);
     addToken(req);
 
-    qDebug() << data;
+    if(type == "application/json")
+        qDebug() << data;
 
     QNetworkReply* rep = m_netman->post(req, data);
     rep->setProperty("type", receive);
